@@ -1,4 +1,4 @@
-// Copyright 2019 fatedier, fatedier@gmail.com
+// Copyright 2019 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fatedier/frp/pkg/util/util"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	"monitoragent/pkg/util/util"
+	"monitoragent/pkg/util/xlog"
 )
 
 type Manager struct {
@@ -48,10 +48,10 @@ func (m *Manager) Register(p Plugin) {
 	if p.IsSupport(OpLogin) {
 		m.loginPlugins = append(m.loginPlugins, p)
 	}
-	if p.IsSupport(OpNewProxy) {
+	if p.IsSupport(OpNewForward) {
 		m.newProxyPlugins = append(m.newProxyPlugins, p)
 	}
-	if p.IsSupport(OpCloseProxy) {
+	if p.IsSupport(OpCloseForward) {
 		m.closeProxyPlugins = append(m.closeProxyPlugins, p)
 	}
 	if p.IsSupport(OpPing) {
@@ -99,7 +99,7 @@ func (m *Manager) Login(content *LoginContent) (*LoginContent, error) {
 	return content, nil
 }
 
-func (m *Manager) NewProxy(content *NewProxyContent) (*NewProxyContent, error) {
+func (m *Manager) NewProxy(content *NewForwardContent) (*NewForwardContent, error) {
 	if len(m.newProxyPlugins) == 0 {
 		return content, nil
 	}
@@ -118,7 +118,7 @@ func (m *Manager) NewProxy(content *NewProxyContent) (*NewProxyContent, error) {
 	ctx = NewReqidContext(ctx, reqid)
 
 	for _, p := range m.newProxyPlugins {
-		res, retContent, err = p.Handle(ctx, OpNewProxy, *content)
+		res, retContent, err = p.Handle(ctx, OpNewForward, *content)
 		if err != nil {
 			xl.Warn("send NewProxy request to plugin [%s] error: %v", p.Name(), err)
 			return nil, errors.New("send NewProxy request to plugin error")
@@ -127,13 +127,13 @@ func (m *Manager) NewProxy(content *NewProxyContent) (*NewProxyContent, error) {
 			return nil, fmt.Errorf("%s", res.RejectReason)
 		}
 		if !res.Unchange {
-			content = retContent.(*NewProxyContent)
+			content = retContent.(*NewForwardContent)
 		}
 	}
 	return content, nil
 }
 
-func (m *Manager) CloseProxy(content *CloseProxyContent) error {
+func (m *Manager) CloseProxy(content *CloseForwardContent) error {
 	if len(m.closeProxyPlugins) == 0 {
 		return nil
 	}
@@ -145,7 +145,7 @@ func (m *Manager) CloseProxy(content *CloseProxyContent) error {
 	ctx = NewReqidContext(ctx, reqid)
 
 	for _, p := range m.closeProxyPlugins {
-		_, _, err := p.Handle(ctx, OpCloseProxy, *content)
+		_, _, err := p.Handle(ctx, OpCloseForward, *content)
 		if err != nil {
 			xl.Warn("send CloseProxy request to plugin [%s] error: %v", p.Name(), err)
 			errs = append(errs, fmt.Sprintf("[%s]: %v", p.Name(), err))

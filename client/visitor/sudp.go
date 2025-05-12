@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@ import (
 	"github.com/fatedier/golib/errors"
 	libio "github.com/fatedier/golib/io"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/proto/udp"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
-	"github.com/fatedier/frp/pkg/util/util"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/proto/udp"
+	netpkg "monitoragent/pkg/util/net"
+	"monitoragent/pkg/util/util"
+	"monitoragent/pkg/util/xlog"
 )
 
 type SUDPVisitor struct {
@@ -84,17 +84,17 @@ func (sv *SUDPVisitor) dispatcher() {
 		select {
 		case firstPacket = <-sv.sendCh:
 			if firstPacket == nil {
-				xl.Info("frpc sudp visitor proxy is closed")
+				xl.Info("monitoragentc sudp visitor forward is closed")
 				return
 			}
 		case <-sv.checkCloseCh:
-			xl.Info("frpc sudp visitor proxy is closed")
+			xl.Info("monitoragentc sudp visitor forward is closed")
 			return
 		}
 
 		visitorConn, err = sv.getNewVisitorConn()
 		if err != nil {
-			xl.Warn("newVisitorConn to frps error: %v, try to reconnect", err)
+			xl.Warn("newVisitorConn to monitoragents error: %v, try to reconnect", err)
 			continue
 		}
 
@@ -111,13 +111,13 @@ func (sv *SUDPVisitor) dispatcher() {
 
 func (sv *SUDPVisitor) worker(workConn net.Conn, firstPacket *msg.UDPPacket) {
 	xl := xlog.FromContextSafe(sv.ctx)
-	xl.Debug("starting sudp proxy worker")
+	xl.Debug("starting sudp forward worker")
 
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	closeCh := make(chan struct{})
 
-	// udp service -> frpc -> frps -> frpc visitor -> user
+	// udp service -> monitoragentc -> monitoragents -> monitoragentc visitor -> user
 	workConnReaderFn := func(conn net.Conn) {
 		defer func() {
 			conn.Close()
@@ -131,7 +131,7 @@ func (sv *SUDPVisitor) worker(workConn net.Conn, firstPacket *msg.UDPPacket) {
 				errRet error
 			)
 
-			// frpc will send heartbeat in workConn to frpc visitor for keeping alive
+			// monitoragentc will send heartbeat in workConn to monitoragentc visitor for keeping alive
 			_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 			if rawMsg, errRet = msg.ReadMsg(conn); errRet != nil {
 				xl.Warn("read from workconn for user udp conn error: %v", errRet)
@@ -141,12 +141,12 @@ func (sv *SUDPVisitor) worker(workConn net.Conn, firstPacket *msg.UDPPacket) {
 			_ = conn.SetReadDeadline(time.Time{})
 			switch m := rawMsg.(type) {
 			case *msg.Ping:
-				xl.Debug("frpc visitor get ping message from frpc")
+				xl.Debug("monitoragentc visitor get ping message from monitoragentc")
 				continue
 			case *msg.UDPPacket:
 				if errRet := errors.PanicToError(func() {
 					sv.readCh <- m
-					xl.Trace("frpc visitor get udp packet from workConn: %s", m.Content)
+					xl.Trace("monitoragentc visitor get udp packet from workConn: %s", m.Content)
 				}); errRet != nil {
 					xl.Info("reader goroutine for udp work connection closed")
 					return
@@ -155,7 +155,7 @@ func (sv *SUDPVisitor) worker(workConn net.Conn, firstPacket *msg.UDPPacket) {
 		}
 	}
 
-	// udp service <- frpc <- frps <- frpc visitor <- user
+	// udp service <- monitoragentc <- monitoragents <- monitoragentc visitor <- user
 	workConnSenderFn := func(conn net.Conn) {
 		defer func() {
 			conn.Close()
@@ -201,13 +201,13 @@ func (sv *SUDPVisitor) getNewVisitorConn() (net.Conn, error) {
 	xl := xlog.FromContextSafe(sv.ctx)
 	visitorConn, err := sv.helper.ConnectServer()
 	if err != nil {
-		return nil, fmt.Errorf("frpc connect frps error: %v", err)
+		return nil, fmt.Errorf("monitoragentc connect monitoragents error: %v", err)
 	}
 
 	now := time.Now().Unix()
 	newVisitorConnMsg := &msg.NewVisitorConn{
 		RunID:          sv.helper.RunID(),
-		ProxyName:      sv.cfg.ServerName,
+		ForwardName:    sv.cfg.ServerName,
 		SignKey:        util.GetAuthKey(sv.cfg.SecretKey, now),
 		Timestamp:      now,
 		UseEncryption:  sv.cfg.Transport.UseEncryption,
@@ -215,14 +215,14 @@ func (sv *SUDPVisitor) getNewVisitorConn() (net.Conn, error) {
 	}
 	err = msg.WriteMsg(visitorConn, newVisitorConnMsg)
 	if err != nil {
-		return nil, fmt.Errorf("frpc send newVisitorConnMsg to frps error: %v", err)
+		return nil, fmt.Errorf("monitoragentc send newVisitorConnMsg to monitoragents error: %v", err)
 	}
 
 	var newVisitorConnRespMsg msg.NewVisitorConnResp
 	_ = visitorConn.SetReadDeadline(time.Now().Add(10 * time.Second))
 	err = msg.ReadMsgInto(visitorConn, &newVisitorConnRespMsg)
 	if err != nil {
-		return nil, fmt.Errorf("frpc read newVisitorConnRespMsg error: %v", err)
+		return nil, fmt.Errorf("monitoragentc read newVisitorConnRespMsg error: %v", err)
 	}
 	_ = visitorConn.SetReadDeadline(time.Time{})
 

@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ import (
 	quic "github.com/quic-go/quic-go"
 	"golang.org/x/time/rate"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/nathole"
-	"github.com/fatedier/frp/pkg/transport"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
-	"github.com/fatedier/frp/pkg/util/util"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/nathole"
+	"monitoragent/pkg/transport"
+	netpkg "monitoragent/pkg/util/net"
+	"monitoragent/pkg/util/util"
+	"monitoragent/pkg/util/xlog"
 )
 
 var ErrNoTunnelSession = errors.New("no tunnel session")
@@ -412,7 +412,7 @@ func (qs *QUICTunnelSession) Init(listenConn *net.UDPConn, raddr *net.UDPAddr) e
 	if err != nil {
 		return fmt.Errorf("create tls config error: %v", err)
 	}
-	tlsConfig.NextProtos = []string{"frp"}
+	tlsConfig.NextProtos = []string{"monitoragent"}
 	quicConn, err := quic.Dial(context.Background(), listenConn, raddr, tlsConfig,
 		&quic.Config{
 			MaxIdleTimeout:     time.Duration(qs.clientCfg.Transport.QUIC.MaxIdleTimeout) * time.Second,

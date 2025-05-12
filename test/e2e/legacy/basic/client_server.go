@@ -7,10 +7,10 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	"github.com/fatedier/frp/test/e2e/framework"
-	"github.com/fatedier/frp/test/e2e/framework/consts"
-	"github.com/fatedier/frp/test/e2e/pkg/cert"
-	"github.com/fatedier/frp/test/e2e/pkg/port"
+	"monitoragent/test/e2e/framework"
+	"monitoragent/test/e2e/framework/consts"
+	"monitoragent/test/e2e/pkg/cert"
+	"monitoragent/test/e2e/pkg/port"
 )
 
 type generalTestConfigures struct {
@@ -109,7 +109,7 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 	})
 
 	// wss is special, it needs to be tested separately.
-	// frps only supports ws, so there should be a proxy to terminate TLS before frps.
+	// monitoragents only supports ws, so there should be a proxy to terminate TLS before monitoragents.
 	ginkgo.Describe("Protocol wss", func() {
 		wssPort := f.AllocPort()
 		configures := &generalTestConfigures{
@@ -121,7 +121,7 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 				log_level = trace
 				login_fail_exit = false
 			`, wssPort),
-			// Due to the fact that frps cannot directly accept wss connections, we use the https2http plugin of another frpc to terminate TLS.
+			// Due to the fact that monitoragents cannot directly accept wss connections, we use the https2http plugin of another monitoragentc to terminate TLS.
 			client2: fmt.Sprintf(`
 				[wss2ws]
 				type = tcp

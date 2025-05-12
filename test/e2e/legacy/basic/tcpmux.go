@@ -8,12 +8,12 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	httppkg "github.com/fatedier/frp/pkg/util/http"
-	"github.com/fatedier/frp/test/e2e/framework"
-	"github.com/fatedier/frp/test/e2e/framework/consts"
-	"github.com/fatedier/frp/test/e2e/mock/server/streamserver"
-	"github.com/fatedier/frp/test/e2e/pkg/request"
-	"github.com/fatedier/frp/test/e2e/pkg/rpc"
+	httppkg "monitoragent/pkg/util/http"
+	"monitoragent/test/e2e/framework"
+	"monitoragent/test/e2e/framework/consts"
+	"monitoragent/test/e2e/mock/server/streamserver"
+	"monitoragent/test/e2e/pkg/request"
+	"monitoragent/test/e2e/pkg/rpc"
 )
 
 var _ = ginkgo.Describe("[Feature: TCPMUX httpconnect]", func() {
@@ -208,9 +208,9 @@ var _ = ginkgo.Describe("[Feature: TCPMUX httpconnect]", func() {
 
 		framework.NewRequestExpect(f).
 			RequestModify(func(r *request.Request) {
-				r.Addr("normal.example.com").Proxy(proxyURLWithAuth("", "", vhostPort)).Body([]byte("frp"))
+				r.Addr("normal.example.com").Proxy(proxyURLWithAuth("", "", vhostPort)).Body([]byte("monitoragent"))
 			}).
-			ExpectResp([]byte("frp")).
+			ExpectResp([]byte("monitoragent")).
 			Ensure()
 		framework.ExpectNoError(respErr)
 		framework.ExpectEqualValues(connectRequestHost, "normal.example.com")

@@ -1,4 +1,4 @@
-// Copyright 2019 fatedier, fatedier@gmail.com
+// Copyright 2019 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,13 +23,19 @@ import (
 	libnet "github.com/fatedier/golib/net"
 )
 
-var FRPTLSHeadByte = 0x17
+// var FRPTLSHeadByte = 0x17
+// 2025-05-13
+var FRPTLSHeadByte = 0x11
 
 func CheckAndEnableTLSServerConnWithTimeout(
 	c net.Conn, tlsConfig *tls.Config, tlsOnly bool, timeout time.Duration,
 ) (out net.Conn, isTLS bool, custom bool, err error) {
-	sc, r := libnet.NewSharedConnSize(c, 2)
-	buf := make([]byte, 1)
+	// sc, r := libnet.NewSharedConnSize(c, 2)
+	// 2025-05-13
+	sc, r := libnet.NewSharedConnSize(c, 6)
+	// buf := make([]byte, 1)
+	// 2025-05-13
+	buf := make([]byte, 5)
 	var n int
 	_ = c.SetReadDeadline(time.Now().Add(timeout))
 	n, err = r.Read(buf)
@@ -39,7 +45,9 @@ func CheckAndEnableTLSServerConnWithTimeout(
 	}
 
 	switch {
-	case n == 1 && int(buf[0]) == FRPTLSHeadByte:
+	// case n == 1 && int(buf[0]) == FRPTLSHeadByte:
+	// 2025-05-13
+	case n == 5 && int(buf[0]) == FRPTLSHeadByte:
 		out = tls.Server(c, tlsConfig)
 		isTLS = true
 		custom = true

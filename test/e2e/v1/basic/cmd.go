@@ -6,8 +6,8 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	"github.com/fatedier/frp/test/e2e/framework"
-	"github.com/fatedier/frp/test/e2e/pkg/request"
+	"monitoragent/test/e2e/framework"
+	"monitoragent/test/e2e/pkg/request"
 )
 
 const (
@@ -18,7 +18,7 @@ var _ = ginkgo.Describe("[Feature: Cmd]", func() {
 	f := framework.NewDefaultFramework()
 
 	ginkgo.Describe("Verify", func() {
-		ginkgo.It("frps valid", func() {
+		ginkgo.It("monitoragents valid", func() {
 			path := f.GenerateConfigFile(`
 			bindAddr = "0.0.0.0"
 			bindPort = 7000
@@ -27,7 +27,7 @@ var _ = ginkgo.Describe("[Feature: Cmd]", func() {
 			framework.ExpectNoError(err)
 			framework.ExpectTrue(strings.Contains(output, ConfigValidStr), "output: %s", output)
 		})
-		ginkgo.It("frps invalid", func() {
+		ginkgo.It("monitoragents invalid", func() {
 			path := f.GenerateConfigFile(`
 			bindAddr = "0.0.0.0"
 			bindPort = 70000
@@ -36,7 +36,7 @@ var _ = ginkgo.Describe("[Feature: Cmd]", func() {
 			framework.ExpectNoError(err)
 			framework.ExpectTrue(!strings.Contains(output, ConfigValidStr), "output: %s", output)
 		})
-		ginkgo.It("frpc valid", func() {
+		ginkgo.It("monitoragentc valid", func() {
 			path := f.GenerateConfigFile(`
 			serverAddr = "0.0.0.0"
 			serverPort = 7000
@@ -45,7 +45,7 @@ var _ = ginkgo.Describe("[Feature: Cmd]", func() {
 			framework.ExpectNoError(err)
 			framework.ExpectTrue(strings.Contains(output, ConfigValidStr), "output: %s", output)
 		})
-		ginkgo.It("frpc invalid", func() {
+		ginkgo.It("monitoragentc invalid", func() {
 			path := f.GenerateConfigFile(`
 			serverAddr = "0.0.0.0"
 			serverPort = 7000

@@ -21,9 +21,9 @@ import (
 
 	"github.com/fatedier/golib/errors"
 
-	"github.com/fatedier/frp/pkg/util/log"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	"monitoragent/pkg/util/log"
+	netpkg "monitoragent/pkg/util/net"
+	"monitoragent/pkg/util/xlog"
 )
 
 type RouteInfo string
@@ -147,7 +147,7 @@ func (v *Muxer) getListener(name, path, httpUser string) (*Listener, bool) {
 		if ok {
 			return vr.payload.(*Listener), true
 		}
-		// Try to check if there is one proxy that doesn't specify routerByHTTPUser, it means match all.
+		// Try to check if there is one forward that doesn't specify routerByHTTPUser, it means match all.
 		vr, ok = v.registryRouter.Get(inName, inPath, "")
 		if ok {
 			return vr.payload.(*Listener), true
@@ -177,7 +177,7 @@ func (v *Muxer) getListener(name, path, httpUser string) (*Listener, bool) {
 		}
 		domainSplit = domainSplit[1:]
 	}
-	// Finally, try to check if there is one proxy that domain is "*" means match all domains.
+	// Finally, try to check if there is one forward that domain is "*" means match all domains.
 	l, ok = findRouter("*", path, httpUser)
 	if ok {
 		return l, true

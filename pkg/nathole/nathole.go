@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ import (
 	"golang.org/x/net/ipv4"
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/transport"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/transport"
+	"monitoragent/pkg/util/xlog"
 )
 
 var (
@@ -76,7 +76,7 @@ type PrepareResult struct {
 	Behavior      string
 }
 
-// PreCheck is used to check if the proxy is ready for penetration.
+// PreCheck is used to check if the forward is ready for penetration.
 // Call this function before calling Prepare to avoid unnecessary preparation work.
 func PreCheck(
 	ctx context.Context, transporter transport.MessageTransporter,

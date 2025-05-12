@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,6 +44,6 @@ func TestUnmarshalTypedProxyConfig(t *testing.T) {
 	err := json.Unmarshal([]byte(strs), &proxyConfigs)
 	require.NoError(err)
 
-	require.IsType(&TCPProxyConfig{}, proxyConfigs.Proxies[0].ProxyConfigurer)
-	require.IsType(&HTTPProxyConfig{}, proxyConfigs.Proxies[1].ProxyConfigurer)
+	require.IsType(&TCPForwardConfig{}, proxyConfigs.Proxies[0].ForwardConfigurer)
+	require.IsType(&HTTPForwardConfig{}, proxyConfigs.Proxies[1].ForwardConfigurer)
 }

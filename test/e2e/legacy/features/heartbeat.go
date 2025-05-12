@@ -6,7 +6,7 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	"github.com/fatedier/frp/test/e2e/framework"
+	"monitoragent/test/e2e/framework"
 )
 
 var _ = ginkgo.Describe("[Feature: Heartbeat]", func() {
@@ -37,7 +37,7 @@ var _ = ginkgo.Describe("[Feature: Heartbeat]", func() {
 		remote_port = %d
 		`, serverPort, f.PortByName(framework.TCPEchoServerPort), remotePort)
 
-		// run frps and frpc
+		// run monitoragents and monitoragentc
 		f.RunProcesses([]string{serverConf}, []string{clientConf})
 
 		framework.NewRequestExpect(f).Protocol("tcp").Port(remotePort).Ensure()

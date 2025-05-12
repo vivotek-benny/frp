@@ -8,13 +8,13 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	"github.com/fatedier/frp/pkg/transport"
-	"github.com/fatedier/frp/test/e2e/framework"
-	"github.com/fatedier/frp/test/e2e/framework/consts"
-	"github.com/fatedier/frp/test/e2e/mock/server/httpserver"
-	"github.com/fatedier/frp/test/e2e/mock/server/streamserver"
-	"github.com/fatedier/frp/test/e2e/pkg/port"
-	"github.com/fatedier/frp/test/e2e/pkg/request"
+	"monitoragent/pkg/transport"
+	"monitoragent/test/e2e/framework"
+	"monitoragent/test/e2e/framework/consts"
+	"monitoragent/test/e2e/mock/server/httpserver"
+	"monitoragent/test/e2e/mock/server/streamserver"
+	"monitoragent/test/e2e/pkg/port"
+	"monitoragent/test/e2e/pkg/request"
 )
 
 var _ = ginkgo.Describe("[Feature: Basic]", func() {
@@ -80,7 +80,7 @@ var _ = ginkgo.Describe("[Feature: Basic]", func() {
 				for _, test := range tests {
 					clientConf += getProxyConf(test.proxyName, test.portName, test.extraConfig) + "\n"
 				}
-				// run frps and frpc
+				// run monitoragents and monitoragentc
 				f.RunProcesses([]string{serverConf}, []string{clientConf})
 
 				for _, test := range tests {
@@ -149,7 +149,7 @@ var _ = ginkgo.Describe("[Feature: Basic]", func() {
 				}
 				clientConf += getProxyConf(test.proxyName, tests[i].customDomains, test.extraConfig) + "\n"
 			}
-			// run frps and frpc
+			// run monitoragents and monitoragentc
 			f.RunProcesses([]string{serverConf}, []string{clientConf})
 
 			for _, test := range tests {
@@ -231,7 +231,7 @@ var _ = ginkgo.Describe("[Feature: Basic]", func() {
 				}
 				clientConf += getProxyConf(test.proxyName, tests[i].customDomains, test.extraConfig) + "\n"
 			}
-			// run frps and frpc
+			// run monitoragents and monitoragentc
 			f.RunProcesses([]string{serverConf}, []string{clientConf})
 
 			tlsConfig, err := transport.NewServerTLSConfig("", "", "")
@@ -412,7 +412,7 @@ var _ = ginkgo.Describe("[Feature: Basic]", func() {
 						clientVisitorConf += config
 					}
 				}
-				// run frps and frpc
+				// run monitoragents and monitoragentc
 				f.RunProcesses([]string{serverConf}, []string{clientServerConf, clientVisitorConf, clientUser2VisitorConf})
 
 				for _, test := range tests {
@@ -489,7 +489,7 @@ var _ = ginkgo.Describe("[Feature: Basic]", func() {
 				f.RunServer(port.GenName(test.proxyName), localServer)
 			}
 
-			// run frps and frpc
+			// run monitoragents and monitoragentc
 			f.RunProcesses([]string{serverConf}, []string{clientConf})
 
 			// Request without HTTP connect should get error

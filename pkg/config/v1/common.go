@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package v1
 import (
 	"sync"
 
-	"github.com/fatedier/frp/pkg/util/util"
+	"monitoragent/pkg/util/util"
 )
 
 // TODO(fatedier): Due to the current implementation issue of the go json library, the UnmarshalJSON method
@@ -97,7 +97,7 @@ type TLSConfig struct {
 }
 
 type LogConfig struct {
-	// This is destination where frp should write the logs.
+	// This is destination where monitoragent should write the logs.
 	// If "console" is used, logs will be printed to stdout, otherwise,
 	// logs will be written to the specified file.
 	// By default, this value is "console".

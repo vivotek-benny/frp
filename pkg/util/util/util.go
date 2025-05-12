@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-// RandID return a rand string used in frp.
+// RandID return a rand string used in monitoragent.
 func RandID() (id string, err error) {
 	return RandIDWithLen(16)
 }

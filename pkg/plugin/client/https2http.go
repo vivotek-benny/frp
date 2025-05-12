@@ -1,4 +1,4 @@
-// Copyright 2019 fatedier, fatedier@gmail.com
+// Copyright 2019 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !frps
+//go:build !monitoragents
 
 package plugin
 
@@ -24,9 +24,9 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/transport"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/transport"
+	netpkg "monitoragent/pkg/util/net"
 )
 
 func init() {
@@ -42,7 +42,7 @@ type HTTPS2HTTPPlugin struct {
 
 func NewHTTPS2HTTPPlugin(options v1.ClientPluginOptions) (Plugin, error) {
 	opts := options.(*v1.HTTPS2HTTPPluginOptions)
-	listener := NewProxyListener()
+	listener := NewForwardListener()
 
 	p := &HTTPS2HTTPPlugin{
 		opts: opts,

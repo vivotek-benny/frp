@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ import (
 	"github.com/samber/lo"
 	"gopkg.in/ini.v1"
 
-	legacyauth "github.com/fatedier/frp/pkg/auth/legacy"
-	"github.com/fatedier/frp/pkg/util/util"
+	legacyauth "monitoragent/pkg/auth/legacy"
+	"monitoragent/pkg/util/util"
 )
 
 // ClientCommonConf is the configuration parsed from ini.
@@ -44,14 +44,14 @@ type ClientCommonConf struct {
 	NatHoleSTUNServer string `ini:"nat_hole_stun_server" json:"nat_hole_stun_server"`
 	// The maximum amount of time a dial to server will wait for a connect to complete.
 	DialServerTimeout int64 `ini:"dial_server_timeout" json:"dial_server_timeout"`
-	// DialServerKeepAlive specifies the interval between keep-alive probes for an active network connection between frpc and frps.
+	// DialServerKeepAlive specifies the interval between keep-alive probes for an active network connection between monitoragentc and monitoragents.
 	// If negative, keep-alive probes are disabled.
 	DialServerKeepAlive int64 `ini:"dial_server_keepalive" json:"dial_server_keepalive"`
 	// ConnectServerLocalIP specifies the address of the client bind when it connect to server.
 	// By default, this value is empty.
 	// this value only use in TCP/Websocket protocol. Not support in KCP protocol.
 	ConnectServerLocalIP string `ini:"connect_server_local_ip" json:"connect_server_local_ip"`
-	// HTTPProxy specifies a proxy address to connect to the server through. If
+	// HTTPProxy specifies a forward address to connect to the server through. If
 	// this value is "", the server will be connected to directly. By default,
 	// this value is read from the "http_proxy" environment variable.
 	HTTPProxy string `ini:"http_proxy" json:"http_proxy"`
@@ -145,7 +145,7 @@ type ClientCommonConf struct {
 	// TLSServerName specifies the custom server name of tls certificate. By
 	// default, server name if same to ServerAddr.
 	TLSServerName string `ini:"tls_server_name" json:"tls_server_name"`
-	// If the disable_custom_tls_first_byte is set to false, frpc will establish a connection with frps using the
+	// If the disable_custom_tls_first_byte is set to false, monitoragentc will establish a connection with monitoragents using the
 	// first custom byte when tls is enabled.
 	// Since v0.50.0, the default value has been changed to true, and the first custom byte is disabled by default.
 	DisableCustomTLSFirstByte bool `ini:"disable_custom_tls_first_byte" json:"disable_custom_tls_first_byte"`
@@ -199,13 +199,13 @@ func UnmarshalClientConfFromIni(source interface{}) (ClientCommonConf, error) {
 	return common, nil
 }
 
-// if len(startProxy) is 0, start all
-// otherwise just start proxies in startProxy map
-func LoadAllProxyConfsFromIni(
+// if len(startForward) is 0, start all
+// otherwise just start proxies in startForward map
+func LoadAllForwardConfsFromIni(
 	prefix string,
 	source interface{},
 	start []string,
-) (map[string]ProxyConf, map[string]VisitorConf, error) {
+) (map[string]ForwardConf, map[string]VisitorConf, error) {
 	f, err := ini.LoadSources(ini.LoadOptions{
 		Insensitive:         false,
 		InsensitiveSections: false,
@@ -217,20 +217,20 @@ func LoadAllProxyConfsFromIni(
 		return nil, nil, err
 	}
 
-	proxyConfs := make(map[string]ProxyConf)
+	forwardConfs := make(map[string]ForwardConf)
 	visitorConfs := make(map[string]VisitorConf)
 
 	if prefix != "" {
 		prefix += "."
 	}
 
-	startProxy := make(map[string]struct{})
+	startForward := make(map[string]struct{})
 	for _, s := range start {
-		startProxy[s] = struct{}{}
+		startForward[s] = struct{}{}
 	}
 
 	startAll := true
-	if len(startProxy) > 0 {
+	if len(startForward) > 0 {
 		startAll = false
 	}
 
@@ -248,7 +248,7 @@ func LoadAllProxyConfsFromIni(
 	for _, section := range rangeSections {
 		err = renderRangeProxyTemplates(f, section)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to render template for proxy %s: %v", section.Name(), err)
+			return nil, nil, fmt.Errorf("failed to render template for forward %s: %v", section.Name(), err)
 		}
 	}
 
@@ -259,7 +259,7 @@ func LoadAllProxyConfsFromIni(
 			continue
 		}
 
-		_, shouldStart := startProxy[name]
+		_, shouldStart := startForward[name]
 		if !startAll && !shouldStart {
 			continue
 		}
@@ -271,11 +271,11 @@ func LoadAllProxyConfsFromIni(
 
 		switch roleType {
 		case "server":
-			newConf, newErr := NewProxyConfFromIni(prefix, name, section)
+			newConf, newErr := NewForwardConfFromIni(prefix, name, section)
 			if newErr != nil {
-				return nil, nil, fmt.Errorf("failed to parse proxy %s, err: %v", name, newErr)
+				return nil, nil, fmt.Errorf("failed to parse forward %s, err: %v", name, newErr)
 			}
-			proxyConfs[prefix+name] = newConf
+			forwardConfs[prefix+name] = newConf
 		case "visitor":
 			newConf, newErr := NewVisitorConfFromIni(prefix, name, section)
 			if newErr != nil {
@@ -283,10 +283,10 @@ func LoadAllProxyConfsFromIni(
 			}
 			visitorConfs[prefix+name] = newConf
 		default:
-			return nil, nil, fmt.Errorf("proxy %s role should be 'server' or 'visitor'", name)
+			return nil, nil, fmt.Errorf("forward %s role should be 'server' or 'visitor'", name)
 		}
 	}
-	return proxyConfs, visitorConfs, nil
+	return forwardConfs, visitorConfs, nil
 }
 
 func renderRangeProxyTemplates(f *ini.File, section *ini.Section) error {

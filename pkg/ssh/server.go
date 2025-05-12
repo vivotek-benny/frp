@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,15 +30,15 @@ import (
 	flag "github.com/spf13/pflag"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/fatedier/frp/client/proxy"
-	"github.com/fatedier/frp/pkg/config"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/util/log"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
-	"github.com/fatedier/frp/pkg/util/util"
-	"github.com/fatedier/frp/pkg/util/xlog"
-	"github.com/fatedier/frp/pkg/virtual"
+	"monitoragent/client/forward"
+	"monitoragent/pkg/config"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/util/log"
+	netpkg "monitoragent/pkg/util/net"
+	"monitoragent/pkg/util/util"
+	"monitoragent/pkg/util/xlog"
+	"monitoragent/pkg/virtual"
 )
 
 const (
@@ -73,7 +73,11 @@ type TunnelServer struct {
 	closeDoneChOnce    sync.Once
 }
 
-func NewTunnelServer(conn net.Conn, sc *ssh.ServerConfig, peerServerListener *netpkg.InternalListener) (*TunnelServer, error) {
+func NewTunnelServer(
+	conn net.Conn,
+	sc *ssh.ServerConfig,
+	peerServerListener *netpkg.InternalListener,
+) (*TunnelServer, error) {
 	s := &TunnelServer{
 		underlyingConn:     conn,
 		sc:                 sc,
@@ -119,7 +123,7 @@ func (s *TunnelServer) Run() error {
 			// Otherwise, once ssh authentication is passed, the virtual client does not need to authenticate again.
 			AlwaysAuthPass: !s.sc.NoClientAuth,
 		},
-		HandleWorkConnCb: func(base *v1.ProxyBaseConfig, workConn net.Conn, m *msg.StartWorkConn) bool {
+		HandleWorkConnCb: func(base *v1.ForwardBaseConfig, workConn net.Conn, m *msg.StartWorkConn) bool {
 			// join workConn and ssh channel
 			c, err := s.openConn(addr)
 			if err != nil {
@@ -147,7 +151,8 @@ func (s *TunnelServer) Run() error {
 			_ = s.peerServerListener.PutConn(conn)
 		}
 	}()
-	xl := xlog.New().AddPrefix(xlog.LogPrefix{Name: "sshVirtualClient", Value: "sshVirtualClient", Priority: 100})
+	xl := xlog.New().
+		AddPrefix(xlog.LogPrefix{Name: "sshVirtualClient", Value: "sshVirtualClient", Priority: 100})
 	ctx := xlog.NewContext(context.Background(), xl)
 	go func() {
 		vcErr := s.vc.Run(ctx)
@@ -163,11 +168,11 @@ func (s *TunnelServer) Run() error {
 		})
 	}()
 
-	s.vc.UpdateProxyConfigurer([]v1.ProxyConfigurer{pc})
+	s.vc.UpdateForwardConfigurer([]v1.ForwardConfigurer{pc})
 
 	if ps, err := s.waitProxyStatusReady(pc.GetBaseConfig().Name, time.Second); err != nil {
 		s.writeToClient(err.Error())
-		log.Warn("wait proxy status ready error: %v", err)
+		log.Warn("wait forward status ready error: %v", err)
 	} else {
 		// success
 		s.writeToClient(createSuccessInfo(clientCfg.User, pc, ps))
@@ -247,7 +252,10 @@ func (s *TunnelServer) waitForwardAddrAndExtraPayload(
 	return addr, extraPayload, nil
 }
 
-func (s *TunnelServer) parseClientAndProxyConfigurer(_ *tcpipForward, extraPayload string) (*v1.ClientCommonConfig, v1.ProxyConfigurer, string, error) {
+func (s *TunnelServer) parseClientAndProxyConfigurer(
+	_ *tcpipForward,
+	extraPayload string,
+) (*v1.ClientCommonConfig, v1.ForwardConfigurer, string, error) {
 	helpMessage := ""
 	cmd := &cobra.Command{
 		Use:   "ssh v0@{address} [command]",
@@ -261,13 +269,17 @@ func (s *TunnelServer) parseClientAndProxyConfigurer(_ *tcpipForward, extraPaylo
 	proxyType := strings.TrimSpace(args[0])
 	supportTypes := []string{"tcp", "http", "https", "tcpmux", "stcp"}
 	if !lo.Contains(supportTypes, proxyType) {
-		return nil, nil, helpMessage, fmt.Errorf("invalid proxy type: %s, support types: %v", proxyType, supportTypes)
+		return nil, nil, helpMessage, fmt.Errorf(
+			"invalid forward type: %s, support types: %v",
+			proxyType,
+			supportTypes,
+		)
 	}
-	pc := v1.NewProxyConfigurerByType(v1.ProxyType(proxyType))
+	pc := v1.NewForwardConfigurerByType(v1.ForwardType(proxyType))
 	if pc == nil {
-		return nil, nil, helpMessage, fmt.Errorf("new proxy configurer error")
+		return nil, nil, helpMessage, fmt.Errorf("new forward configurer error")
 	}
-	config.RegisterProxyFlags(cmd, pc, config.WithSSHMode())
+	config.RegisterForwardFlags(cmd, pc, config.WithSSHMode())
 
 	clientCfg := v1.ClientCommonConfig{}
 	config.RegisterClientCommonConfigFlags(cmd, &clientCfg, config.WithSSHMode())
@@ -354,7 +366,10 @@ func (s *TunnelServer) openConn(addr *tcpipForward) (net.Conn, error) {
 	return conn, nil
 }
 
-func (s *TunnelServer) waitProxyStatusReady(name string, timeout time.Duration) (*proxy.WorkingStatus, error) {
+func (s *TunnelServer) waitProxyStatusReady(
+	name string,
+	timeout time.Duration,
+) (*forward.WorkingStatus, error) {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -364,18 +379,18 @@ func (s *TunnelServer) waitProxyStatusReady(name string, timeout time.Duration) 
 	for {
 		select {
 		case <-ticker.C:
-			ps, err := s.vc.Service().GetProxyStatus(name)
+			ps, err := s.vc.Service().GetForwardStatus(name)
 			if err != nil {
 				continue
 			}
 			switch ps.Phase {
-			case proxy.ProxyPhaseRunning:
+			case forward.ForwardPhaseRunning:
 				return ps, nil
-			case proxy.ProxyPhaseStartErr, proxy.ProxyPhaseClosed:
+			case forward.ForwardPhaseStartErr, forward.ForwardPhaseClosed:
 				return ps, errors.New(ps.Err)
 			}
 		case <-timer.C:
-			return nil, fmt.Errorf("wait proxy status ready timeout")
+			return nil, fmt.Errorf("wait forward status ready timeout")
 		case <-s.doneCh:
 			return nil, fmt.Errorf("ssh tunnel server closed")
 		}

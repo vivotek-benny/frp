@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,16 +26,17 @@ import (
 	"github.com/fatedier/golib/crypto"
 	"github.com/samber/lo"
 
-	"github.com/fatedier/frp/client/proxy"
-	"github.com/fatedier/frp/pkg/auth"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
-	httppkg "github.com/fatedier/frp/pkg/util/http"
-	"github.com/fatedier/frp/pkg/util/log"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
-	"github.com/fatedier/frp/pkg/util/version"
-	"github.com/fatedier/frp/pkg/util/wait"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	"monitoragent/client/connector"
+	"monitoragent/client/forward"
+	"monitoragent/pkg/auth"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
+	httppkg "monitoragent/pkg/util/http"
+	"monitoragent/pkg/util/log"
+	netpkg "monitoragent/pkg/util/net"
+	"monitoragent/pkg/util/version"
+	"monitoragent/pkg/util/wait"
+	"monitoragent/pkg/util/xlog"
 )
 
 func init() {
@@ -53,7 +54,7 @@ func (e cancelErr) Error() string {
 // ServiceOptions contains options for creating a new client service.
 type ServiceOptions struct {
 	Common      *v1.ClientCommonConfig
-	ProxyCfgs   []v1.ProxyConfigurer
+	ForwardCfgs []v1.ForwardConfigurer
 	VisitorCfgs []v1.VisitorConfigurer
 
 	// ConfigFilePath is the path to the configuration file used to initialize.
@@ -68,15 +69,15 @@ type ServiceOptions struct {
 	// The Connector shields the underlying connection details, whether it is through TCP or QUIC connection,
 	// and regardless of whether multiplexing is used.
 	//
-	// If it is not set, the default frpc connector will be used.
-	// By using a custom Connector, it can be used to implement a VirtualClient, which connects to frps
+	// If it is not set, the default monitoragentc connector will be used.
+	// By using a custom Connector, it can be used to implement a VirtualClient, which connects to monitoragents
 	// through a pipe instead of a real physical connection.
-	ConnectorCreator func(context.Context, *v1.ClientCommonConfig) Connector
+	ConnectorCreator func(context.Context, *v1.ClientCommonConfig) connector.Connector
 
 	// HandleWorkConnCb is a callback function that is called when a new work connection is created.
 	//
-	// If it is not set, the default frpc implementation will be used.
-	HandleWorkConnCb func(*v1.ProxyBaseConfig, net.Conn, *msg.StartWorkConn) bool
+	// If it is not set, the default monitoragentc implementation will be used.
+	HandleWorkConnCb func(*v1.ForwardBaseConfig, net.Conn, *msg.StartWorkConn) bool
 }
 
 // setServiceOptionsDefault sets the default values for ServiceOptions.
@@ -85,16 +86,16 @@ func setServiceOptionsDefault(options *ServiceOptions) {
 		options.Common.Complete()
 	}
 	if options.ConnectorCreator == nil {
-		options.ConnectorCreator = NewConnector
+		options.ConnectorCreator = connector.NewDefaultConnector
 	}
 }
 
-// Service is the client service that connects to frps and provides proxy services.
+// Service is the client service that connects to monitoragents and provides forward services.
 type Service struct {
 	ctlMu sync.RWMutex
 	// manager control connection with server
 	ctl *Control
-	// Uniq id got from frps, it will be attached to loginMsg.
+	// Uniq id got from monitoragents, it will be attached to loginMsg.
 	runID string
 
 	// Sets authentication based on selected method
@@ -105,7 +106,7 @@ type Service struct {
 
 	cfgMu       sync.RWMutex
 	common      *v1.ClientCommonConfig
-	proxyCfgs   []v1.ProxyConfigurer
+	forwardCfgs []v1.ForwardConfigurer
 	visitorCfgs []v1.VisitorConfigurer
 	clientSpec  *msg.ClientSpec
 
@@ -119,69 +120,58 @@ type Service struct {
 	cancel                   context.CancelCauseFunc
 	gracefulShutdownDuration time.Duration
 
-	connectorCreator func(context.Context, *v1.ClientCommonConfig) Connector
-	handleWorkConnCb func(*v1.ProxyBaseConfig, net.Conn, *msg.StartWorkConn) bool
+	connectorCreator func(context.Context, *v1.ClientCommonConfig) connector.Connector
+	handleWorkConnCb func(*v1.ForwardBaseConfig, net.Conn, *msg.StartWorkConn) bool
 }
 
 func NewService(options ServiceOptions) (*Service, error) {
 	setServiceOptionsDefault(&options)
 
-	var webServer *httppkg.Server
-	if options.Common.WebServer.Port > 0 {
-		ws, err := httppkg.NewServer(options.Common.WebServer)
-		if err != nil {
-			return nil, err
-		}
-		webServer = ws
-	}
-	s := &Service{
-		ctx:              context.Background(),
+	ctx := context.Background()
+	svc := &Service{
+		ctx:              ctx,
 		authSetter:       auth.NewAuthSetter(options.Common.Auth),
-		webServer:        webServer,
 		common:           options.Common,
 		configFilePath:   options.ConfigFilePath,
-		proxyCfgs:        options.ProxyCfgs,
+		forwardCfgs:      options.ForwardCfgs,
 		visitorCfgs:      options.VisitorCfgs,
 		clientSpec:       options.ClientSpec,
 		connectorCreator: options.ConnectorCreator,
 		handleWorkConnCb: options.HandleWorkConnCb,
 	}
-	if webServer != nil {
-		webServer.RouteRegister(s.registerRouteHandlers)
-	}
-	return s, nil
+
+	return svc, nil
 }
 
-func (svr *Service) Run(ctx context.Context) error {
+func (svc *Service) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancelCause(ctx)
-	svr.ctx = xlog.NewContext(ctx, xlog.FromContextSafe(ctx))
-	svr.cancel = cancel
+	svc.ctx = xlog.NewContext(ctx, xlog.FromContextSafe(ctx))
+	svc.cancel = cancel
 
-	// set custom DNSServer
-	if svr.common.DNSServer != "" {
-		netpkg.SetDefaultDNSAddress(svr.common.DNSServer)
+	log.Info("monitoragent is starting...")
+
+	if svc.common.DNSServer != "" {
+		log.Info("Using custom DNS: %s", svc.common.DNSServer)
+		netpkg.SetDefaultDNSAddress(svc.common.DNSServer)
 	}
 
-	// first login to frps
-	svr.loopLoginUntilSuccess(10*time.Second, lo.FromPtr(svr.common.LoginFailExit))
-	if svr.ctl == nil {
+	svc.loopLoginUntilSuccess(10*time.Second, lo.FromPtr(svc.common.LoginFailExit))
+
+	if svc.ctl == nil {
 		cancelCause := cancelErr{}
-		_ = errors.As(context.Cause(svr.ctx), &cancelCause)
-		return fmt.Errorf("login to the server failed: %v. With loginFailExit enabled, no additional retries will be attempted", cancelCause.Err)
+		_ = errors.As(context.Cause(svc.ctx), &cancelCause)
+		return fmt.Errorf(
+			"login to the server failed: %v. This client will now exit.",
+			cancelCause.Err,
+		)
 	}
 
-	go svr.keepControllerWorking()
+	go svc.keepControllerWorking()
 
-	if svr.webServer != nil {
-		go func() {
-			log.Info("admin server listen on %s", svr.webServer.Address())
-			if err := svr.webServer.Run(); err != nil {
-				log.Warn("admin server exit with error: %v", err)
-			}
-		}()
-	}
-	<-svr.ctx.Done()
-	svr.stop()
+	log.Info("monitoragent is now running.")
+	<-svc.ctx.Done()
+	log.Info("monitoragent is shutting down.")
+	svc.stop()
 	return nil
 }
 
@@ -216,10 +206,10 @@ func (svr *Service) keepControllerWorking() {
 	), true, svr.ctx.Done())
 }
 
-// login creates a connection to frps and registers it self as a client
+// login creates a connection to monitoragents and registers it self as a client
 // conn: control connection
 // session: if it's not nil, using tcp mux
-func (svr *Service) login() (conn net.Conn, connector Connector, err error) {
+func (svr *Service) login() (conn net.Conn, connector connector.Connector, err error) {
 	xl := xlog.FromContextSafe(svr.ctx)
 	connector = svr.connectorCreator(svr.ctx, svr.common)
 	if err = connector.Open(); err != nil {
@@ -237,7 +227,7 @@ func (svr *Service) login() (conn net.Conn, connector Connector, err error) {
 		return
 	}
 
-	loginMsg := &msg.Login{
+	handshakeMsg := &msg.Handshake{
 		Arch:      runtime.GOARCH,
 		Os:        runtime.GOOS,
 		PoolCount: svr.common.Transport.PoolCount,
@@ -248,35 +238,35 @@ func (svr *Service) login() (conn net.Conn, connector Connector, err error) {
 		Metas:     svr.common.Metadatas,
 	}
 	if svr.clientSpec != nil {
-		loginMsg.ClientSpec = *svr.clientSpec
+		handshakeMsg.ClientSpec = *svr.clientSpec
 	}
 
 	// Add auth
-	if err = svr.authSetter.SetLogin(loginMsg); err != nil {
+	if err = svr.authSetter.SetLogin(handshakeMsg); err != nil {
 		return
 	}
 
-	if err = msg.WriteMsg(conn, loginMsg); err != nil {
+	if err = msg.WriteMsg(conn, handshakeMsg); err != nil {
 		return
 	}
 
-	var loginRespMsg msg.LoginResp
+	var handshakeAckMsg msg.HandshakeAck
 	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	if err = msg.ReadMsgInto(conn, &loginRespMsg); err != nil {
+	if err = msg.ReadMsgInto(conn, &handshakeAckMsg); err != nil {
 		return
 	}
 	_ = conn.SetReadDeadline(time.Time{})
 
-	if loginRespMsg.Error != "" {
-		err = fmt.Errorf("%s", loginRespMsg.Error)
-		xl.Error("%s", loginRespMsg.Error)
+	if handshakeAckMsg.Error != "" {
+		err = fmt.Errorf("%s", handshakeAckMsg.Error)
+		xl.Error("%s", handshakeAckMsg.Error)
 		return
 	}
 
-	svr.runID = loginRespMsg.RunID
+	svr.runID = handshakeAckMsg.RunID
 	xl.AddPrefix(xlog.LogPrefix{Name: "runID", Value: svr.runID})
 
-	xl.Info("login to server success, get run id [%s]", loginRespMsg.RunID)
+	xl.Info("login to server success, get run id [%s]", handshakeAckMsg.RunID)
 	return
 }
 
@@ -295,7 +285,7 @@ func (svr *Service) loopLoginUntilSuccess(maxInterval time.Duration, firstLoginE
 		}
 
 		svr.cfgMu.RLock()
-		proxyCfgs := svr.proxyCfgs
+		forwardCfgs := svr.forwardCfgs
 		visitorCfgs := svr.visitorCfgs
 		svr.cfgMu.RUnlock()
 		connEncrypted := true
@@ -304,7 +294,7 @@ func (svr *Service) loopLoginUntilSuccess(maxInterval time.Duration, firstLoginE
 		}
 		sessionCtx := &SessionContext{
 			Common:        svr.common,
-			RunID:         svr.runID,
+			SessionID:     svr.runID,
 			Conn:          conn,
 			ConnEncrypted: connEncrypted,
 			AuthSetter:    svr.authSetter,
@@ -318,7 +308,7 @@ func (svr *Service) loopLoginUntilSuccess(maxInterval time.Duration, firstLoginE
 		}
 		ctl.SetInWorkConnCallback(svr.handleWorkConnCb)
 
-		ctl.Run(proxyCfgs, visitorCfgs)
+		ctl.Run(forwardCfgs, visitorCfgs)
 		// close and replace previous control
 		svr.ctlMu.Lock()
 		if svr.ctl != nil {
@@ -339,9 +329,12 @@ func (svr *Service) loopLoginUntilSuccess(maxInterval time.Duration, firstLoginE
 		}), true, svr.ctx.Done())
 }
 
-func (svr *Service) UpdateAllConfigurer(proxyCfgs []v1.ProxyConfigurer, visitorCfgs []v1.VisitorConfigurer) error {
+func (svr *Service) UpdateAllConfigurer(
+	forwardCfgs []v1.ForwardConfigurer,
+	visitorCfgs []v1.VisitorConfigurer,
+) error {
 	svr.cfgMu.Lock()
-	svr.proxyCfgs = proxyCfgs
+	svr.forwardCfgs = forwardCfgs
 	svr.visitorCfgs = visitorCfgs
 	svr.cfgMu.Unlock()
 
@@ -350,7 +343,7 @@ func (svr *Service) UpdateAllConfigurer(proxyCfgs []v1.ProxyConfigurer, visitorC
 	svr.ctlMu.RUnlock()
 
 	if ctl != nil {
-		return svr.ctl.UpdateAllConfigurer(proxyCfgs, visitorCfgs)
+		return svr.ctl.UpdateAllConfigurer(forwardCfgs, visitorCfgs)
 	}
 	return nil
 }
@@ -373,8 +366,8 @@ func (svr *Service) stop() {
 	}
 }
 
-// TODO(fatedier): Use StatusExporter to provide query interfaces instead of directly using methods from the Service.
-func (svr *Service) GetProxyStatus(name string) (*proxy.WorkingStatus, error) {
+// TODO(vpp_team): Use StatusExporter to provide query interfaces instead of directly using methods from the Service.
+func (svr *Service) GetForwardStatus(name string) (*forward.WorkingStatus, error) {
 	svr.ctlMu.RLock()
 	ctl := svr.ctl
 	svr.ctlMu.RUnlock()
@@ -382,9 +375,9 @@ func (svr *Service) GetProxyStatus(name string) (*proxy.WorkingStatus, error) {
 	if ctl == nil {
 		return nil, fmt.Errorf("control is not running")
 	}
-	ws, ok := ctl.pm.GetProxyStatus(name)
+	ws, ok := ctl.fm.GetForwardStatus(name)
 	if !ok {
-		return nil, fmt.Errorf("proxy [%s] is not found", name)
+		return nil, fmt.Errorf("forward [%s] is not found", name)
 	}
 	return ws, nil
 }

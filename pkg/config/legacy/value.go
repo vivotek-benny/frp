@@ -1,4 +1,4 @@
-// Copyright 2020 The frp Authors
+// Copyright 2020 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ func GetValues() *Values {
 }
 
 func RenderContent(in []byte) (out []byte, err error) {
-	tmpl, errRet := template.New("frp").Parse(string(in))
+	tmpl, errRet := template.New("monitoragent").Parse(string(in))
 	if errRet != nil {
 		err = errRet
 		return

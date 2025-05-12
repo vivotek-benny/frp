@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,20 +19,20 @@ import (
 	"net"
 	"sync"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/transport"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/transport"
+	netpkg "monitoragent/pkg/util/net"
+	"monitoragent/pkg/util/xlog"
 )
 
 // Helper wraps some functions for visitor to use.
 type Helper interface {
-	// ConnectServer directly connects to the frp server.
+	// ConnectServer directly connects to the monitoragent server.
 	ConnectServer() (net.Conn, error)
 	// TransferConn transfers the connection to another visitor.
 	TransferConn(string, net.Conn) error
 	// MsgTransporter returns the message transporter that is used to send and receive messages
-	// to the frp server through the controller.
+	// to the monitoragent server through the controller.
 	MsgTransporter() transport.MessageTransporter
 	// RunID returns the run id of current controller.
 	RunID() string

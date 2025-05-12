@@ -1,4 +1,4 @@
-// Copyright 2017 frp team
+// Copyright 2017 monitoragent team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !frps
+//go:build !monitoragents
 
 package plugin
 
@@ -28,27 +28,27 @@ import (
 	libio "github.com/fatedier/golib/io"
 	libnet "github.com/fatedier/golib/net"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
-	"github.com/fatedier/frp/pkg/util/util"
+	v1 "monitoragent/pkg/config/v1"
+	netpkg "monitoragent/pkg/util/net"
+	"monitoragent/pkg/util/util"
 )
 
 func init() {
-	Register(v1.PluginHTTPProxy, NewHTTPProxyPlugin)
+	Register(v1.PluginHTTPForward, NewHTTPForwardPlugin)
 }
 
-type HTTPProxy struct {
-	opts *v1.HTTPProxyPluginOptions
+type HTTPForward struct {
+	opts *v1.HTTPForwardPluginOptions
 
 	l *Listener
 	s *http.Server
 }
 
-func NewHTTPProxyPlugin(options v1.ClientPluginOptions) (Plugin, error) {
-	opts := options.(*v1.HTTPProxyPluginOptions)
-	listener := NewProxyListener()
+func NewHTTPForwardPlugin(options v1.ClientPluginOptions) (Plugin, error) {
+	opts := options.(*v1.HTTPForwardPluginOptions)
+	listener := NewForwardListener()
 
-	hp := &HTTPProxy{
+	hp := &HTTPForward{
 		l:    listener,
 		opts: opts,
 	}
@@ -63,11 +63,11 @@ func NewHTTPProxyPlugin(options v1.ClientPluginOptions) (Plugin, error) {
 	return hp, nil
 }
 
-func (hp *HTTPProxy) Name() string {
-	return v1.PluginHTTPProxy
+func (hp *HTTPForward) Name() string {
+	return v1.PluginHTTPForward
 }
 
-func (hp *HTTPProxy) Handle(conn io.ReadWriteCloser, realConn net.Conn, _ *ExtraInfo) {
+func (hp *HTTPForward) Handle(conn io.ReadWriteCloser, realConn net.Conn, _ *ExtraInfo) {
 	wrapConn := netpkg.WrapReadWriteCloserToConn(conn, realConn)
 
 	sc, rd := libnet.NewSharedConn(wrapConn)
@@ -92,13 +92,13 @@ func (hp *HTTPProxy) Handle(conn io.ReadWriteCloser, realConn net.Conn, _ *Extra
 	_ = hp.l.PutConn(sc)
 }
 
-func (hp *HTTPProxy) Close() error {
+func (hp *HTTPForward) Close() error {
 	hp.s.Close()
 	hp.l.Close()
 	return nil
 }
 
-func (hp *HTTPProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (hp *HTTPForward) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if ok := hp.Auth(req); !ok {
 		rw.Header().Set("Proxy-Authenticate", "Basic")
 		rw.WriteHeader(http.StatusProxyAuthRequired)
@@ -114,7 +114,7 @@ func (hp *HTTPProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (hp *HTTPProxy) HTTPHandler(rw http.ResponseWriter, req *http.Request) {
+func (hp *HTTPForward) HTTPHandler(rw http.ResponseWriter, req *http.Request) {
 	removeProxyHeaders(req)
 
 	resp, err := http.DefaultTransport.RoundTrip(req)
@@ -136,7 +136,7 @@ func (hp *HTTPProxy) HTTPHandler(rw http.ResponseWriter, req *http.Request) {
 // deprecated
 // Hijack needs to SetReadDeadline on the Conn of the request, but if we use stream compression here,
 // we may always get i/o timeout error.
-func (hp *HTTPProxy) ConnectHandler(rw http.ResponseWriter, req *http.Request) {
+func (hp *HTTPForward) ConnectHandler(rw http.ResponseWriter, req *http.Request) {
 	hj, ok := rw.(http.Hijacker)
 	if !ok {
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -160,7 +160,7 @@ func (hp *HTTPProxy) ConnectHandler(rw http.ResponseWriter, req *http.Request) {
 	go libio.Join(remote, client)
 }
 
-func (hp *HTTPProxy) Auth(req *http.Request) bool {
+func (hp *HTTPForward) Auth(req *http.Request) bool {
 	if hp.opts.HTTPUser == "" && hp.opts.HTTPPassword == "" {
 		return true
 	}
@@ -188,7 +188,7 @@ func (hp *HTTPProxy) Auth(req *http.Request) bool {
 	return true
 }
 
-func (hp *HTTPProxy) handleConnectReq(req *http.Request, rwc io.ReadWriteCloser) {
+func (hp *HTTPForward) handleConnectReq(req *http.Request, rwc io.ReadWriteCloser) {
 	defer rwc.Close()
 	if ok := hp.Auth(req); !ok {
 		res := getBadResponse()

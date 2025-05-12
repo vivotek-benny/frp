@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/fatedier/frp/test/e2e/framework/consts"
-	"github.com/fatedier/frp/test/e2e/mock/server"
-	"github.com/fatedier/frp/test/e2e/mock/server/httpserver"
-	"github.com/fatedier/frp/test/e2e/mock/server/streamserver"
-	"github.com/fatedier/frp/test/e2e/pkg/port"
+	"monitoragent/test/e2e/framework/consts"
+	"monitoragent/test/e2e/mock/server"
+	"monitoragent/test/e2e/mock/server/httpserver"
+	"monitoragent/test/e2e/mock/server/streamserver"
+	"monitoragent/test/e2e/pkg/port"
 )
 
 const (
@@ -40,7 +40,7 @@ func NewMockServers(portAllocator *port.Allocator) *MockServers {
 	)
 
 	udsIndex := portAllocator.Get()
-	udsAddr := fmt.Sprintf("%s/frp_echo_server_%d.sock", os.TempDir(), udsIndex)
+	udsAddr := fmt.Sprintf("%s/monitoragent_echo_server_%d.sock", os.TempDir(), udsIndex)
 	os.Remove(udsAddr)
 	s.udsEchoServer = streamserver.New(streamserver.Unix, streamserver.WithBindAddr(udsAddr))
 	return s

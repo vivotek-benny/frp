@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/fatedier/frp/pkg/config/types"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
+	"monitoragent/pkg/config/types"
+	v1 "monitoragent/pkg/config/v1"
 )
 
 func Convert_ClientCommonConf_To_v1(conf *ClientCommonConf) *v1.ClientCommonConfig {
@@ -181,19 +181,19 @@ func transformHeadersFromPluginParams(params map[string]string) v1.HeaderOperati
 	return out
 }
 
-func Convert_ProxyConf_To_v1_Base(conf ProxyConf) *v1.ProxyBaseConfig {
-	out := &v1.ProxyBaseConfig{}
+func Convert_ForwardConf_To_v1_Base(conf ForwardConf) *v1.ForwardBaseConfig {
+	out := &v1.ForwardBaseConfig{}
 	base := conf.GetBaseConfig()
 
-	out.Name = base.ProxyName
-	out.Type = base.ProxyType
+	out.Name = base.ForwardName
+	out.Type = base.ForwardType
 	out.Metadatas = base.Metas
 
 	out.Transport.UseEncryption = base.UseEncryption
 	out.Transport.UseCompression = base.UseCompression
 	out.Transport.BandwidthLimit = base.BandwidthLimit
 	out.Transport.BandwidthLimitMode = base.BandwidthLimitMode
-	out.Transport.ProxyProtocolVersion = base.ProxyProtocolVersion
+	out.Transport.ForwardProtocolVersion = base.ProxyProtocolVersion
 
 	out.LoadBalancer.Group = base.Group
 	out.LoadBalancer.GroupKey = base.GroupKey
@@ -215,7 +215,7 @@ func Convert_ProxyConf_To_v1_Base(conf ProxyConf) *v1.ProxyBaseConfig {
 			RequestHeaders:    transformHeadersFromPluginParams(base.PluginParams),
 		}
 	case "http_proxy":
-		out.Plugin.ClientPluginOptions = &v1.HTTPProxyPluginOptions{
+		out.Plugin.ClientPluginOptions = &v1.HTTPForwardPluginOptions{
 			HTTPUser:     base.PluginParams["plugin_http_user"],
 			HTTPPassword: base.PluginParams["plugin_http_passwd"],
 		}
@@ -256,20 +256,20 @@ func Convert_ProxyConf_To_v1_Base(conf ProxyConf) *v1.ProxyBaseConfig {
 	return out
 }
 
-func Convert_ProxyConf_To_v1(conf ProxyConf) v1.ProxyConfigurer {
-	outBase := Convert_ProxyConf_To_v1_Base(conf)
-	var out v1.ProxyConfigurer
+func Convert_ForwardConf_To_v1(conf ForwardConf) v1.ForwardConfigurer {
+	outBase := Convert_ForwardConf_To_v1_Base(conf)
+	var out v1.ForwardConfigurer
 	switch v := conf.(type) {
-	case *TCPProxyConf:
-		c := &v1.TCPProxyConfig{ProxyBaseConfig: *outBase}
+	case *TCPForwardConf:
+		c := &v1.TCPForwardConfig{ForwardBaseConfig: *outBase}
 		c.RemotePort = v.RemotePort
 		out = c
-	case *UDPProxyConf:
-		c := &v1.UDPProxyConfig{ProxyBaseConfig: *outBase}
+	case *UDPForwardConf:
+		c := &v1.UDPForwardConfig{ForwardBaseConfig: *outBase}
 		c.RemotePort = v.RemotePort
 		out = c
-	case *HTTPProxyConf:
-		c := &v1.HTTPProxyConfig{ProxyBaseConfig: *outBase}
+	case *HTTPForwardConf:
+		c := &v1.HTTPForwardConfig{ForwardBaseConfig: *outBase}
 		c.CustomDomains = v.CustomDomains
 		c.SubDomain = v.SubDomain
 		c.Locations = v.Locations
@@ -279,13 +279,13 @@ func Convert_ProxyConf_To_v1(conf ProxyConf) v1.ProxyConfigurer {
 		c.RequestHeaders.Set = v.Headers
 		c.RouteByHTTPUser = v.RouteByHTTPUser
 		out = c
-	case *HTTPSProxyConf:
-		c := &v1.HTTPSProxyConfig{ProxyBaseConfig: *outBase}
+	case *HTTPSForwardConf:
+		c := &v1.HTTPSForwardConfig{ForwardBaseConfig: *outBase}
 		c.CustomDomains = v.CustomDomains
 		c.SubDomain = v.SubDomain
 		out = c
-	case *TCPMuxProxyConf:
-		c := &v1.TCPMuxProxyConfig{ProxyBaseConfig: *outBase}
+	case *TCPMuxForwardConf:
+		c := &v1.TCPMuxForwardConfig{ForwardBaseConfig: *outBase}
 		c.CustomDomains = v.CustomDomains
 		c.SubDomain = v.SubDomain
 		c.HTTPUser = v.HTTPUser
@@ -293,18 +293,18 @@ func Convert_ProxyConf_To_v1(conf ProxyConf) v1.ProxyConfigurer {
 		c.RouteByHTTPUser = v.RouteByHTTPUser
 		c.Multiplexer = v.Multiplexer
 		out = c
-	case *STCPProxyConf:
-		c := &v1.STCPProxyConfig{ProxyBaseConfig: *outBase}
+	case *STCPForwardConf:
+		c := &v1.STCPForwardConfig{ForwardBaseConfig: *outBase}
 		c.Secretkey = v.Sk
 		c.AllowUsers = v.AllowUsers
 		out = c
-	case *SUDPProxyConf:
-		c := &v1.SUDPProxyConfig{ProxyBaseConfig: *outBase}
+	case *SUDPForwardConf:
+		c := &v1.SUDPForwardConfig{ForwardBaseConfig: *outBase}
 		c.Secretkey = v.Sk
 		c.AllowUsers = v.AllowUsers
 		out = c
-	case *XTCPProxyConf:
-		c := &v1.XTCPProxyConfig{ProxyBaseConfig: *outBase}
+	case *XTCPForwardConf:
+		c := &v1.XTCPForwardConfig{ForwardBaseConfig: *outBase}
 		c.Secretkey = v.Sk
 		c.AllowUsers = v.AllowUsers
 		out = c
@@ -316,8 +316,8 @@ func Convert_VisitorConf_To_v1_Base(conf VisitorConf) *v1.VisitorBaseConfig {
 	out := &v1.VisitorBaseConfig{}
 	base := conf.GetBaseConfig()
 
-	out.Name = base.ProxyName
-	out.Type = base.ProxyType
+	out.Name = base.ForwardName
+	out.Type = base.ForwardType
 	out.Transport.UseEncryption = base.UseEncryption
 	out.Transport.UseCompression = base.UseCompression
 	out.SecretKey = base.Sk

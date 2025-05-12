@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,10 +23,10 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/transport"
-	"github.com/fatedier/frp/pkg/util/log"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/transport"
+	"monitoragent/pkg/util/log"
+	netpkg "monitoragent/pkg/util/net"
 )
 
 type Gateway struct {

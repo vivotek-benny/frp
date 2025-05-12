@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,16 +21,19 @@ import (
 
 	"github.com/samber/lo"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
+	v1 "monitoragent/pkg/config/v1"
 )
 
-func validateProxyBaseConfigForClient(c *v1.ProxyBaseConfig) error {
+func validateForwardBaseConfigForClient(c *v1.ForwardBaseConfig) error {
 	if c.Name == "" {
 		return errors.New("name should not be empty")
 	}
 
-	if !lo.Contains([]string{"", "v1", "v2"}, c.Transport.ProxyProtocolVersion) {
-		return fmt.Errorf("not support proxy protocol version: %s", c.Transport.ProxyProtocolVersion)
+	if !lo.Contains([]string{"", "v1", "v2"}, c.Transport.ForwardProtocolVersion) {
+		return fmt.Errorf(
+			"not support forward protocol version: %s",
+			c.Transport.ForwardProtocolVersion,
+		)
 	}
 
 	if !lo.Contains([]string{"client", "server"}, c.Transport.BandwidthLimitMode) {
@@ -61,7 +64,7 @@ func validateProxyBaseConfigForClient(c *v1.ProxyBaseConfig) error {
 	return nil
 }
 
-func validateProxyBaseConfigForServer(c *v1.ProxyBaseConfig, s *v1.ServerConfig) error {
+func validateForwardBaseConfigForServer(c *v1.ForwardBaseConfig, s *v1.ServerConfig) error {
 	return nil
 }
 
@@ -74,16 +77,23 @@ func validateDomainConfigForClient(c *v1.DomainConfig) error {
 
 func validateDomainConfigForServer(c *v1.DomainConfig, s *v1.ServerConfig) error {
 	for _, domain := range c.CustomDomains {
-		if s.SubDomainHost != "" && len(strings.Split(s.SubDomainHost, ".")) < len(strings.Split(domain, ".")) {
+		if s.SubDomainHost != "" &&
+			len(strings.Split(s.SubDomainHost, ".")) < len(strings.Split(domain, ".")) {
 			if strings.Contains(domain, s.SubDomainHost) {
-				return fmt.Errorf("custom domain [%s] should not belong to subdomain host [%s]", domain, s.SubDomainHost)
+				return fmt.Errorf(
+					"custom domain [%s] should not belong to subdomain host [%s]",
+					domain,
+					s.SubDomainHost,
+				)
 			}
 		}
 	}
 
 	if c.SubDomain != "" {
 		if s.SubDomainHost == "" {
-			return errors.New("subdomain is not supported because this feature is not enabled in server")
+			return errors.New(
+				"subdomain is not supported because this feature is not enabled in server",
+			)
 		}
 
 		if strings.Contains(c.SubDomain, ".") || strings.Contains(c.SubDomain, "*") {
@@ -93,42 +103,42 @@ func validateDomainConfigForServer(c *v1.DomainConfig, s *v1.ServerConfig) error
 	return nil
 }
 
-func ValidateProxyConfigurerForClient(c v1.ProxyConfigurer) error {
+func ValidateForwardConfigurerForClient(c v1.ForwardConfigurer) error {
 	base := c.GetBaseConfig()
-	if err := validateProxyBaseConfigForClient(base); err != nil {
+	if err := validateForwardBaseConfigForClient(base); err != nil {
 		return err
 	}
 
 	switch v := c.(type) {
-	case *v1.TCPProxyConfig:
-		return validateTCPProxyConfigForClient(v)
-	case *v1.UDPProxyConfig:
-		return validateUDPProxyConfigForClient(v)
-	case *v1.TCPMuxProxyConfig:
-		return validateTCPMuxProxyConfigForClient(v)
-	case *v1.HTTPProxyConfig:
-		return validateHTTPProxyConfigForClient(v)
-	case *v1.HTTPSProxyConfig:
-		return validateHTTPSProxyConfigForClient(v)
-	case *v1.STCPProxyConfig:
-		return validateSTCPProxyConfigForClient(v)
-	case *v1.XTCPProxyConfig:
-		return validateXTCPProxyConfigForClient(v)
-	case *v1.SUDPProxyConfig:
-		return validateSUDPProxyConfigForClient(v)
+	case *v1.TCPForwardConfig:
+		return validateTCPForwardConfigForClient(v)
+	case *v1.UDPForwardConfig:
+		return validateUDPForwardConfigForClient(v)
+	case *v1.TCPMuxForwardConfig:
+		return validateTCPMuxForwardConfigForClient(v)
+	case *v1.HTTPForwardConfig:
+		return validateHTTPForwardConfigForClient(v)
+	case *v1.HTTPSForwardConfig:
+		return validateHTTPSForwardConfigForClient(v)
+	case *v1.STCPForwardConfig:
+		return validateSTCPForwardConfigForClient(v)
+	case *v1.XTCPForwardConfig:
+		return validateXTCPForwardConfigForClient(v)
+	case *v1.SUDPForwardConfig:
+		return validateSUDPForwardConfigForClient(v)
 	}
-	return errors.New("unknown proxy config type")
+	return errors.New("unknown forward config type")
 }
 
-func validateTCPProxyConfigForClient(c *v1.TCPProxyConfig) error {
+func validateTCPForwardConfigForClient(c *v1.TCPForwardConfig) error {
 	return nil
 }
 
-func validateUDPProxyConfigForClient(c *v1.UDPProxyConfig) error {
+func validateUDPForwardConfigForClient(c *v1.UDPForwardConfig) error {
 	return nil
 }
 
-func validateTCPMuxProxyConfigForClient(c *v1.TCPMuxProxyConfig) error {
+func validateTCPMuxForwardConfigForClient(c *v1.TCPMuxForwardConfig) error {
 	if err := validateDomainConfigForClient(&c.DomainConfig); err != nil {
 		return err
 	}
@@ -139,72 +149,74 @@ func validateTCPMuxProxyConfigForClient(c *v1.TCPMuxProxyConfig) error {
 	return nil
 }
 
-func validateHTTPProxyConfigForClient(c *v1.HTTPProxyConfig) error {
+func validateHTTPForwardConfigForClient(c *v1.HTTPForwardConfig) error {
 	return validateDomainConfigForClient(&c.DomainConfig)
 }
 
-func validateHTTPSProxyConfigForClient(c *v1.HTTPSProxyConfig) error {
+func validateHTTPSForwardConfigForClient(c *v1.HTTPSForwardConfig) error {
 	return validateDomainConfigForClient(&c.DomainConfig)
 }
 
-func validateSTCPProxyConfigForClient(c *v1.STCPProxyConfig) error {
+func validateSTCPForwardConfigForClient(c *v1.STCPForwardConfig) error {
 	return nil
 }
 
-func validateXTCPProxyConfigForClient(c *v1.XTCPProxyConfig) error {
+func validateXTCPForwardConfigForClient(c *v1.XTCPForwardConfig) error {
 	return nil
 }
 
-func validateSUDPProxyConfigForClient(c *v1.SUDPProxyConfig) error {
+func validateSUDPForwardConfigForClient(c *v1.SUDPForwardConfig) error {
 	return nil
 }
 
-func ValidateProxyConfigurerForServer(c v1.ProxyConfigurer, s *v1.ServerConfig) error {
+func ValidateForwardConfigurerForServer(c v1.ForwardConfigurer, s *v1.ServerConfig) error {
 	base := c.GetBaseConfig()
-	if err := validateProxyBaseConfigForServer(base, s); err != nil {
+	if err := validateForwardBaseConfigForServer(base, s); err != nil {
 		return err
 	}
 
 	switch v := c.(type) {
-	case *v1.TCPProxyConfig:
-		return validateTCPProxyConfigForServer(v, s)
-	case *v1.UDPProxyConfig:
-		return validateUDPProxyConfigForServer(v, s)
-	case *v1.TCPMuxProxyConfig:
-		return validateTCPMuxProxyConfigForServer(v, s)
-	case *v1.HTTPProxyConfig:
-		return validateHTTPProxyConfigForServer(v, s)
-	case *v1.HTTPSProxyConfig:
-		return validateHTTPSProxyConfigForServer(v, s)
-	case *v1.STCPProxyConfig:
-		return validateSTCPProxyConfigForServer(v, s)
-	case *v1.XTCPProxyConfig:
-		return validateXTCPProxyConfigForServer(v, s)
-	case *v1.SUDPProxyConfig:
-		return validateSUDPProxyConfigForServer(v, s)
+	case *v1.TCPForwardConfig:
+		return validateTCPForwardConfigForServer(v, s)
+	case *v1.UDPForwardConfig:
+		return validateUDPForwardConfigForServer(v, s)
+	case *v1.TCPMuxForwardConfig:
+		return validateTCPMuxForwardConfigForServer(v, s)
+	case *v1.HTTPForwardConfig:
+		return validateHTTPForwardConfigForServer(v, s)
+	case *v1.HTTPSForwardConfig:
+		return validateHTTPSForwardConfigForServer(v, s)
+	case *v1.STCPForwardConfig:
+		return validateSTCPForwardConfigForServer(v, s)
+	case *v1.XTCPForwardConfig:
+		return validateXTCPForwardConfigForServer(v, s)
+	case *v1.SUDPForwardConfig:
+		return validateSUDPForwardConfigForServer(v, s)
 	default:
-		return errors.New("unknown proxy config type")
+		return errors.New("unknown forward config type")
 	}
 }
 
-func validateTCPProxyConfigForServer(c *v1.TCPProxyConfig, s *v1.ServerConfig) error {
+func validateTCPForwardConfigForServer(c *v1.TCPForwardConfig, s *v1.ServerConfig) error {
 	return nil
 }
 
-func validateUDPProxyConfigForServer(c *v1.UDPProxyConfig, s *v1.ServerConfig) error {
+func validateUDPForwardConfigForServer(c *v1.UDPForwardConfig, s *v1.ServerConfig) error {
 	return nil
 }
 
-func validateTCPMuxProxyConfigForServer(c *v1.TCPMuxProxyConfig, s *v1.ServerConfig) error {
+func validateTCPMuxForwardConfigForServer(c *v1.TCPMuxForwardConfig, s *v1.ServerConfig) error {
 	if c.Multiplexer == string(v1.TCPMultiplexerHTTPConnect) &&
 		s.TCPMuxHTTPConnectPort == 0 {
-		return fmt.Errorf("tcpmux with multiplexer httpconnect not supported because this feature is not enabled in server")
+		return fmt.Errorf(
+			"tcpmux with multiplexer httpconnect not supported because this feature is not enabled in server",
+		)
 	}
 
 	return validateDomainConfigForServer(&c.DomainConfig, s)
 }
 
-func validateHTTPProxyConfigForServer(c *v1.HTTPProxyConfig, s *v1.ServerConfig) error {
+func validateHTTPForwardConfigForServer(c *v1.HTTPForwardConfig, s *v1.ServerConfig) error {
 	if s.VhostHTTPPort == 0 {
 		return fmt.Errorf("type [http] not supported when vhost http port is not set")
 	}
@@ -212,7 +224,7 @@ func validateHTTPProxyConfigForServer(c *v1.HTTPProxyConfig, s *v1.ServerConfig)
 	return validateDomainConfigForServer(&c.DomainConfig, s)
 }
 
-func validateHTTPSProxyConfigForServer(c *v1.HTTPSProxyConfig, s *v1.ServerConfig) error {
+func validateHTTPSForwardConfigForServer(c *v1.HTTPSForwardConfig, s *v1.ServerConfig) error {
 	if s.VhostHTTPSPort == 0 {
 		return fmt.Errorf("type [https] not supported when vhost https port is not set")
 	}
@@ -220,14 +232,14 @@ func validateHTTPSProxyConfigForServer(c *v1.HTTPSProxyConfig, s *v1.ServerConfi
 	return validateDomainConfigForServer(&c.DomainConfig, s)
 }
 
-func validateSTCPProxyConfigForServer(c *v1.STCPProxyConfig, s *v1.ServerConfig) error {
+func validateSTCPForwardConfigForServer(c *v1.STCPForwardConfig, s *v1.ServerConfig) error {
 	return nil
 }
 
-func validateXTCPProxyConfigForServer(c *v1.XTCPProxyConfig, s *v1.ServerConfig) error {
+func validateXTCPForwardConfigForServer(c *v1.XTCPForwardConfig, s *v1.ServerConfig) error {
 	return nil
 }
 
-func validateSUDPProxyConfigForServer(c *v1.SUDPProxyConfig, s *v1.ServerConfig) error {
+func validateSUDPForwardConfigForServer(c *v1.SUDPForwardConfig, s *v1.ServerConfig) error {
 	return nil
 }

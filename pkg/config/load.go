@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,11 +29,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	"github.com/fatedier/frp/pkg/config/legacy"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/config/v1/validation"
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/util/util"
+	"monitoragent/pkg/config/legacy"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/config/v1/validation"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/util/util"
 )
 
 var glbEnvs map[string]string
@@ -80,7 +80,7 @@ func DetectLegacyINIFormatFromFile(path string) bool {
 }
 
 func RenderWithTemplate(in []byte, values *Values) ([]byte, error) {
-	tmpl, err := template.New("frp").Parse(string(in))
+	tmpl, err := template.New("monitoragent").Parse(string(in))
 	if err != nil {
 		return nil, err
 	}
@@ -138,18 +138,21 @@ func LoadConfigure(b []byte, c any, strict bool) error {
 	return yaml.Unmarshal(b, c)
 }
 
-func NewProxyConfigurerFromMsg(m *msg.NewProxy, serverCfg *v1.ServerConfig) (v1.ProxyConfigurer, error) {
-	m.ProxyType = util.EmptyOr(m.ProxyType, string(v1.ProxyTypeTCP))
+func NewForwardConfigurerFromMsg(
+	m *msg.NewForward,
+	serverCfg *v1.ServerConfig,
+) (v1.ForwardConfigurer, error) {
+	m.ForwardType = util.EmptyOr(m.ForwardType, string(v1.ForwardTypeTCP))
 
-	configurer := v1.NewProxyConfigurerByType(v1.ProxyType(m.ProxyType))
+	configurer := v1.NewForwardConfigurerByType(v1.ForwardType(m.ForwardType))
 	if configurer == nil {
-		return nil, fmt.Errorf("unknown proxy type: %s", m.ProxyType)
+		return nil, fmt.Errorf("unknown forward type: %s", m.ForwardType)
 	}
 
 	configurer.UnmarshalFromMsg(m)
 	configurer.Complete("")
 
-	if err := validation.ValidateProxyConfigurerForServer(configurer, serverCfg); err != nil {
+	if err := validation.ValidateForwardConfigurerForServer(configurer, serverCfg); err != nil {
 		return nil, err
 	}
 	return configurer, nil
@@ -186,25 +189,25 @@ func LoadServerConfig(path string, strict bool) (*v1.ServerConfig, bool, error) 
 
 func LoadClientConfig(path string, strict bool) (
 	*v1.ClientCommonConfig,
-	[]v1.ProxyConfigurer,
+	[]v1.ForwardConfigurer,
 	[]v1.VisitorConfigurer,
 	bool, error,
 ) {
 	var (
 		cliCfg         *v1.ClientCommonConfig
-		proxyCfgs      = make([]v1.ProxyConfigurer, 0)
+		forwardCfgs    = make([]v1.ForwardConfigurer, 0)
 		visitorCfgs    = make([]v1.VisitorConfigurer, 0)
 		isLegacyFormat bool
 	)
 
 	if DetectLegacyINIFormatFromFile(path) {
-		legacyCommon, legacyProxyCfgs, legacyVisitorCfgs, err := legacy.ParseClientConfig(path)
+		legacyCommon, legacyForwardCfgs, legacyVisitorCfgs, err := legacy.ParseClientConfig(path)
 		if err != nil {
 			return nil, nil, nil, true, err
 		}
 		cliCfg = legacy.Convert_ClientCommonConf_To_v1(&legacyCommon)
-		for _, c := range legacyProxyCfgs {
-			proxyCfgs = append(proxyCfgs, legacy.Convert_ProxyConf_To_v1(c))
+		for _, c := range legacyForwardCfgs {
+			forwardCfgs = append(forwardCfgs, legacy.Convert_ForwardConf_To_v1(c))
 		}
 		for _, c := range legacyVisitorCfgs {
 			visitorCfgs = append(visitorCfgs, legacy.Convert_VisitorConf_To_v1(c))
@@ -217,7 +220,7 @@ func LoadClientConfig(path string, strict bool) (
 		}
 		cliCfg = &allCfg.ClientCommonConfig
 		for _, c := range allCfg.Proxies {
-			proxyCfgs = append(proxyCfgs, c.ProxyConfigurer)
+			forwardCfgs = append(forwardCfgs, c.ForwardConfigurer)
 		}
 		for _, c := range allCfg.Visitors {
 			visitorCfgs = append(visitorCfgs, c.VisitorConfigurer)
@@ -227,18 +230,22 @@ func LoadClientConfig(path string, strict bool) (
 	// Load additional config from includes.
 	// legacy ini format already handle this in ParseClientConfig.
 	if len(cliCfg.IncludeConfigFiles) > 0 && !isLegacyFormat {
-		extProxyCfgs, extVisitorCfgs, err := LoadAdditionalClientConfigs(cliCfg.IncludeConfigFiles, isLegacyFormat, strict)
+		extForwardCfgs, extVisitorCfgs, err := LoadAdditionalClientConfigs(
+			cliCfg.IncludeConfigFiles,
+			isLegacyFormat,
+			strict,
+		)
 		if err != nil {
 			return nil, nil, nil, isLegacyFormat, err
 		}
-		proxyCfgs = append(proxyCfgs, extProxyCfgs...)
+		forwardCfgs = append(forwardCfgs, extForwardCfgs...)
 		visitorCfgs = append(visitorCfgs, extVisitorCfgs...)
 	}
 
 	// Filter by start
 	if len(cliCfg.Start) > 0 {
 		startSet := sets.New(cliCfg.Start...)
-		proxyCfgs = lo.Filter(proxyCfgs, func(c v1.ProxyConfigurer, _ int) bool {
+		forwardCfgs = lo.Filter(forwardCfgs, func(c v1.ForwardConfigurer, _ int) bool {
 			return startSet.Has(c.GetBaseConfig().Name)
 		})
 		visitorCfgs = lo.Filter(visitorCfgs, func(c v1.VisitorConfigurer, _ int) bool {
@@ -249,17 +256,21 @@ func LoadClientConfig(path string, strict bool) (
 	if cliCfg != nil {
 		cliCfg.Complete()
 	}
-	for _, c := range proxyCfgs {
+	for _, c := range forwardCfgs {
 		c.Complete(cliCfg.User)
 	}
 	for _, c := range visitorCfgs {
 		c.Complete(cliCfg)
 	}
-	return cliCfg, proxyCfgs, visitorCfgs, isLegacyFormat, nil
+	return cliCfg, forwardCfgs, visitorCfgs, isLegacyFormat, nil
 }
 
-func LoadAdditionalClientConfigs(paths []string, isLegacyFormat bool, strict bool) ([]v1.ProxyConfigurer, []v1.VisitorConfigurer, error) {
-	proxyCfgs := make([]v1.ProxyConfigurer, 0)
+func LoadAdditionalClientConfigs(
+	paths []string,
+	isLegacyFormat bool,
+	strict bool,
+) ([]v1.ForwardConfigurer, []v1.VisitorConfigurer, error) {
+	forwardCfgs := make([]v1.ForwardConfigurer, 0)
 	visitorCfgs := make([]v1.VisitorConfigurer, 0)
 	for _, path := range paths {
 		absDir, err := filepath.Abs(filepath.Dir(path))
@@ -282,10 +293,14 @@ func LoadAdditionalClientConfigs(paths []string, isLegacyFormat bool, strict boo
 				// support yaml/json/toml
 				cfg := v1.ClientConfig{}
 				if err := LoadConfigureFromFile(absFile, &cfg, strict); err != nil {
-					return nil, nil, fmt.Errorf("load additional config from %s error: %v", absFile, err)
+					return nil, nil, fmt.Errorf(
+						"load additional config from %s error: %v",
+						absFile,
+						err,
+					)
 				}
 				for _, c := range cfg.Proxies {
-					proxyCfgs = append(proxyCfgs, c.ProxyConfigurer)
+					forwardCfgs = append(forwardCfgs, c.ForwardConfigurer)
 				}
 				for _, c := range cfg.Visitors {
 					visitorCfgs = append(visitorCfgs, c.VisitorConfigurer)
@@ -293,5 +308,5 @@ func LoadAdditionalClientConfigs(paths []string, isLegacyFormat bool, strict boo
 			}
 		}
 	}
-	return proxyCfgs, visitorCfgs, nil
+	return forwardCfgs, visitorCfgs, nil
 }

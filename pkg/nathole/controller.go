@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,10 +28,10 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/transport"
-	"github.com/fatedier/frp/pkg/util/log"
-	"github.com/fatedier/frp/pkg/util/util"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/transport"
+	"monitoragent/pkg/util/log"
+	"monitoragent/pkg/util/util"
 )
 
 // NatHoleTimeout seconds.
@@ -131,7 +131,7 @@ func (c *Controller) ListenClient(name string, sk string, allowUsers []string) (
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, ok := c.clientCfgs[name]; ok {
-		return nil, fmt.Errorf("proxy [%s] is repeated", name)
+		return nil, fmt.Errorf("forward [%s] is repeated", name)
 	}
 	c.clientCfgs[name] = cfg
 	return cfg.sidCh, nil

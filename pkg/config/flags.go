@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/fatedier/frp/pkg/config/types"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/config/v1/validation"
+	"monitoragent/pkg/config/types"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/config/v1/validation"
 )
 
 type RegisterFlagOption func(*registerFlagOptions)
@@ -53,40 +53,44 @@ func (f *BandwidthQuantityFlag) Type() string {
 	return "string"
 }
 
-func RegisterProxyFlags(cmd *cobra.Command, c v1.ProxyConfigurer, opts ...RegisterFlagOption) {
-	registerProxyBaseConfigFlags(cmd, c.GetBaseConfig(), opts...)
+func RegisterForwardFlags(cmd *cobra.Command, c v1.ForwardConfigurer, opts ...RegisterFlagOption) {
+	registerForwardBaseConfigFlags(cmd, c.GetBaseConfig(), opts...)
 
 	switch cc := c.(type) {
-	case *v1.TCPProxyConfig:
+	case *v1.TCPForwardConfig:
 		cmd.Flags().IntVarP(&cc.RemotePort, "remote_port", "r", 0, "remote port")
-	case *v1.UDPProxyConfig:
+	case *v1.UDPForwardConfig:
 		cmd.Flags().IntVarP(&cc.RemotePort, "remote_port", "r", 0, "remote port")
-	case *v1.HTTPProxyConfig:
-		registerProxyDomainConfigFlags(cmd, &cc.DomainConfig)
+	case *v1.HTTPForwardConfig:
+		registerForwardDomainConfigFlags(cmd, &cc.DomainConfig)
 		cmd.Flags().StringSliceVarP(&cc.Locations, "locations", "", []string{}, "locations")
 		cmd.Flags().StringVarP(&cc.HTTPUser, "http_user", "", "", "http auth user")
 		cmd.Flags().StringVarP(&cc.HTTPPassword, "http_pwd", "", "", "http auth password")
 		cmd.Flags().StringVarP(&cc.HostHeaderRewrite, "host_header_rewrite", "", "", "host header rewrite")
-	case *v1.HTTPSProxyConfig:
-		registerProxyDomainConfigFlags(cmd, &cc.DomainConfig)
-	case *v1.TCPMuxProxyConfig:
-		registerProxyDomainConfigFlags(cmd, &cc.DomainConfig)
+	case *v1.HTTPSForwardConfig:
+		registerForwardDomainConfigFlags(cmd, &cc.DomainConfig)
+	case *v1.TCPMuxForwardConfig:
+		registerForwardDomainConfigFlags(cmd, &cc.DomainConfig)
 		cmd.Flags().StringVarP(&cc.Multiplexer, "mux", "", "", "multiplexer")
 		cmd.Flags().StringVarP(&cc.HTTPUser, "http_user", "", "", "http auth user")
 		cmd.Flags().StringVarP(&cc.HTTPPassword, "http_pwd", "", "", "http auth password")
-	case *v1.STCPProxyConfig:
+	case *v1.STCPForwardConfig:
 		cmd.Flags().StringVarP(&cc.Secretkey, "sk", "", "", "secret key")
 		cmd.Flags().StringSliceVarP(&cc.AllowUsers, "allow_users", "", []string{}, "allow visitor users")
-	case *v1.SUDPProxyConfig:
+	case *v1.SUDPForwardConfig:
 		cmd.Flags().StringVarP(&cc.Secretkey, "sk", "", "", "secret key")
 		cmd.Flags().StringSliceVarP(&cc.AllowUsers, "allow_users", "", []string{}, "allow visitor users")
-	case *v1.XTCPProxyConfig:
+	case *v1.XTCPForwardConfig:
 		cmd.Flags().StringVarP(&cc.Secretkey, "sk", "", "", "secret key")
 		cmd.Flags().StringSliceVarP(&cc.AllowUsers, "allow_users", "", []string{}, "allow visitor users")
 	}
 }
 
-func registerProxyBaseConfigFlags(cmd *cobra.Command, c *v1.ProxyBaseConfig, opts ...RegisterFlagOption) {
+func registerForwardBaseConfigFlags(
+	cmd *cobra.Command,
+	c *v1.ForwardBaseConfig,
+	opts ...RegisterFlagOption,
+) {
 	if c == nil {
 		return
 	}
@@ -95,23 +99,26 @@ func registerProxyBaseConfigFlags(cmd *cobra.Command, c *v1.ProxyBaseConfig, opt
 		opt(options)
 	}
 
-	cmd.Flags().StringVarP(&c.Name, "proxy_name", "n", "", "proxy name")
+	cmd.Flags().StringVarP(&c.Name, "forward_name", "n", "", "forward name")
 
 	if !options.sshMode {
 		cmd.Flags().StringVarP(&c.LocalIP, "local_ip", "i", "127.0.0.1", "local ip")
 		cmd.Flags().IntVarP(&c.LocalPort, "local_port", "l", 0, "local port")
 		cmd.Flags().BoolVarP(&c.Transport.UseEncryption, "ue", "", false, "use encryption")
 		cmd.Flags().BoolVarP(&c.Transport.UseCompression, "uc", "", false, "use compression")
-		cmd.Flags().StringVarP(&c.Transport.BandwidthLimitMode, "bandwidth_limit_mode", "", types.BandwidthLimitModeClient, "bandwidth limit mode")
-		cmd.Flags().VarP(&BandwidthQuantityFlag{V: &c.Transport.BandwidthLimit}, "bandwidth_limit", "", "bandwidth limit (e.g. 100KB or 1MB)")
+		cmd.Flags().
+			StringVarP(&c.Transport.BandwidthLimitMode, "bandwidth_limit_mode", "", types.BandwidthLimitModeClient, "bandwidth limit mode")
+		cmd.Flags().
+			VarP(&BandwidthQuantityFlag{V: &c.Transport.BandwidthLimit}, "bandwidth_limit", "", "bandwidth limit (e.g. 100KB or 1MB)")
 	}
 }
 
-func registerProxyDomainConfigFlags(cmd *cobra.Command, c *v1.DomainConfig) {
+func registerForwardDomainConfigFlags(cmd *cobra.Command, c *v1.DomainConfig) {
 	if c == nil {
 		return
 	}
-	cmd.Flags().StringSliceVarP(&c.CustomDomains, "custom_domain", "d", []string{}, "custom domains")
+	cmd.Flags().
+		StringSliceVarP(&c.CustomDomains, "custom_domain", "d", []string{}, "custom domains")
 	cmd.Flags().StringVarP(&c.SubDomain, "sd", "", "", "sub domain")
 }
 
@@ -121,7 +128,11 @@ func RegisterVisitorFlags(cmd *cobra.Command, c v1.VisitorConfigurer, opts ...Re
 	// add visitor flags if exist
 }
 
-func registerVisitorBaseConfigFlags(cmd *cobra.Command, c *v1.VisitorBaseConfig, _ ...RegisterFlagOption) {
+func registerVisitorBaseConfigFlags(
+	cmd *cobra.Command,
+	c *v1.VisitorBaseConfig,
+	_ ...RegisterFlagOption,
+) {
 	if c == nil {
 		return
 	}
@@ -134,24 +145,36 @@ func registerVisitorBaseConfigFlags(cmd *cobra.Command, c *v1.VisitorBaseConfig,
 	cmd.Flags().IntVarP(&c.BindPort, "bind_port", "", 0, "bind port")
 }
 
-func RegisterClientCommonConfigFlags(cmd *cobra.Command, c *v1.ClientCommonConfig, opts ...RegisterFlagOption) {
+func RegisterClientCommonConfigFlags(
+	cmd *cobra.Command,
+	c *v1.ClientCommonConfig,
+	opts ...RegisterFlagOption,
+) {
 	options := &registerFlagOptions{}
 	for _, opt := range opts {
 		opt(options)
 	}
 
 	if !options.sshMode {
-		cmd.PersistentFlags().StringVarP(&c.ServerAddr, "server_addr", "s", "127.0.0.1", "frp server's address")
-		cmd.PersistentFlags().IntVarP(&c.ServerPort, "server_port", "P", 7000, "frp server's port")
+		cmd.PersistentFlags().
+			StringVarP(&c.ServerAddr, "server_addr", "s", "127.0.0.1", "monitoragent server's address")
+		cmd.PersistentFlags().
+			IntVarP(&c.ServerPort, "server_port", "P", 7000, "monitoragent server's port")
 		cmd.PersistentFlags().StringVarP(&c.Transport.Protocol, "protocol", "p", "tcp",
 			fmt.Sprintf("optional values are %v", validation.SupportedTransportProtocols))
 		cmd.PersistentFlags().StringVarP(&c.Log.Level, "log_level", "", "info", "log level")
-		cmd.PersistentFlags().StringVarP(&c.Log.To, "log_file", "", "console", "console or file path")
-		cmd.PersistentFlags().Int64VarP(&c.Log.MaxDays, "log_max_days", "", 3, "log file reversed days")
-		cmd.PersistentFlags().BoolVarP(&c.Log.DisablePrintColor, "disable_log_color", "", false, "disable log color in console")
-		cmd.PersistentFlags().StringVarP(&c.Transport.TLS.ServerName, "tls_server_name", "", "", "specify the custom server name of tls certificate")
-		cmd.PersistentFlags().StringVarP(&c.DNSServer, "dns_server", "", "", "specify dns server instead of using system default one")
-		c.Transport.TLS.Enable = cmd.PersistentFlags().BoolP("tls_enable", "", true, "enable frpc tls")
+		cmd.PersistentFlags().
+			StringVarP(&c.Log.To, "log_file", "", "console", "console or file path")
+		cmd.PersistentFlags().
+			Int64VarP(&c.Log.MaxDays, "log_max_days", "", 3, "log file reversed days")
+		cmd.PersistentFlags().
+			BoolVarP(&c.Log.DisablePrintColor, "disable_log_color", "", false, "disable log color in console")
+		cmd.PersistentFlags().
+			StringVarP(&c.Transport.TLS.ServerName, "tls_server_name", "", "", "specify the custom server name of tls certificate")
+		cmd.PersistentFlags().
+			StringVarP(&c.DNSServer, "dns_server", "", "", "specify dns server instead of using system default one")
+		c.Transport.TLS.Enable = cmd.PersistentFlags().
+			BoolP("tls_enable", "", true, "enable monitoragentc tls")
 	}
 	cmd.PersistentFlags().StringVarP(&c.User, "user", "u", "", "user")
 	cmd.PersistentFlags().StringVarP(&c.Auth.Token, "token", "t", "", "auth token")
@@ -216,28 +239,40 @@ func RegisterServerConfigFlags(cmd *cobra.Command, c *v1.ServerConfig, opts ...R
 	cmd.PersistentFlags().StringVarP(&c.BindAddr, "bind_addr", "", "0.0.0.0", "bind address")
 	cmd.PersistentFlags().IntVarP(&c.BindPort, "bind_port", "p", 7000, "bind port")
 	cmd.PersistentFlags().IntVarP(&c.KCPBindPort, "kcp_bind_port", "", 0, "kcp bind udp port")
-	cmd.PersistentFlags().StringVarP(&c.ProxyBindAddr, "proxy_bind_addr", "", "0.0.0.0", "proxy bind address")
+	cmd.PersistentFlags().
+		StringVarP(&c.ProxyBindAddr, "proxy_bind_addr", "", "0.0.0.0", "proxy bind address")
 	cmd.PersistentFlags().IntVarP(&c.VhostHTTPPort, "vhost_http_port", "", 0, "vhost http port")
 	cmd.PersistentFlags().IntVarP(&c.VhostHTTPSPort, "vhost_https_port", "", 0, "vhost https port")
-	cmd.PersistentFlags().Int64VarP(&c.VhostHTTPTimeout, "vhost_http_timeout", "", 60, "vhost http response header timeout")
-	cmd.PersistentFlags().StringVarP(&c.WebServer.Addr, "dashboard_addr", "", "0.0.0.0", "dashboard address")
+	cmd.PersistentFlags().
+		Int64VarP(&c.VhostHTTPTimeout, "vhost_http_timeout", "", 60, "vhost http response header timeout")
+	cmd.PersistentFlags().
+		StringVarP(&c.WebServer.Addr, "dashboard_addr", "", "0.0.0.0", "dashboard address")
 	cmd.PersistentFlags().IntVarP(&c.WebServer.Port, "dashboard_port", "", 0, "dashboard port")
-	cmd.PersistentFlags().StringVarP(&c.WebServer.User, "dashboard_user", "", "admin", "dashboard user")
-	cmd.PersistentFlags().StringVarP(&c.WebServer.Password, "dashboard_pwd", "", "admin", "dashboard password")
-	cmd.PersistentFlags().BoolVarP(&c.EnablePrometheus, "enable_prometheus", "", false, "enable prometheus dashboard")
+	cmd.PersistentFlags().
+		StringVarP(&c.WebServer.User, "dashboard_user", "", "admin", "dashboard user")
+	cmd.PersistentFlags().
+		StringVarP(&c.WebServer.Password, "dashboard_pwd", "", "admin", "dashboard password")
+	cmd.PersistentFlags().
+		BoolVarP(&c.EnablePrometheus, "enable_prometheus", "", false, "enable prometheus dashboard")
 	cmd.PersistentFlags().StringVarP(&c.Log.To, "log_file", "", "console", "log file")
 	cmd.PersistentFlags().StringVarP(&c.Log.Level, "log_level", "", "info", "log level")
 	cmd.PersistentFlags().Int64VarP(&c.Log.MaxDays, "log_max_days", "", 3, "log max days")
-	cmd.PersistentFlags().BoolVarP(&c.Log.DisablePrintColor, "disable_log_color", "", false, "disable log color in console")
+	cmd.PersistentFlags().
+		BoolVarP(&c.Log.DisablePrintColor, "disable_log_color", "", false, "disable log color in console")
 	cmd.PersistentFlags().StringVarP(&c.Auth.Token, "token", "t", "", "auth token")
 	cmd.PersistentFlags().StringVarP(&c.SubDomainHost, "subdomain_host", "", "", "subdomain host")
-	cmd.PersistentFlags().VarP(&PortsRangeSliceFlag{V: &c.AllowPorts}, "allow_ports", "", "allow ports")
-	cmd.PersistentFlags().Int64VarP(&c.MaxPortsPerClient, "max_ports_per_client", "", 0, "max ports per client")
-	cmd.PersistentFlags().BoolVarP(&c.Transport.TLS.Force, "tls_only", "", false, "frps tls only")
+	cmd.PersistentFlags().
+		VarP(&PortsRangeSliceFlag{V: &c.AllowPorts}, "allow_ports", "", "allow ports")
+	cmd.PersistentFlags().
+		Int64VarP(&c.MaxPortsPerClient, "max_ports_per_client", "", 0, "max ports per client")
+	cmd.PersistentFlags().
+		BoolVarP(&c.Transport.TLS.Force, "tls_only", "", false, "monitoragents tls only")
 
 	webServerTLS := v1.TLSConfig{}
-	cmd.PersistentFlags().StringVarP(&webServerTLS.CertFile, "dashboard_tls_cert_file", "", "", "dashboard tls cert file")
-	cmd.PersistentFlags().StringVarP(&webServerTLS.KeyFile, "dashboard_tls_key_file", "", "", "dashboard tls key file")
+	cmd.PersistentFlags().
+		StringVarP(&webServerTLS.CertFile, "dashboard_tls_cert_file", "", "", "dashboard tls cert file")
+	cmd.PersistentFlags().
+		StringVarP(&webServerTLS.KeyFile, "dashboard_tls_key_file", "", "", "dashboard tls key file")
 	cmd.PersistentFlags().VarP(&BoolFuncFlag{
 		TrueFunc: func() { c.WebServer.TLS = &webServerTLS },
 	}, "dashboard_tls_mode", "", "if enable dashboard tls mode")

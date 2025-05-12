@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fatedier/frp/test/e2e/pkg/port"
+	"monitoragent/test/e2e/pkg/port"
 )
 
 const (
-	TestString = "frp is a fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet."
+	TestString = "monitoragent is a fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet."
 
 	DefaultTimeout = 2 * time.Second
 )

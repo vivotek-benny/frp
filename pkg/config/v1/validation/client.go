@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 
 	"github.com/samber/lo"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
+	v1 "monitoragent/pkg/config/v1"
 )
 
 func ValidateClientCommonConfig(c *v1.ClientCommonConfig) (Warning, error) {
@@ -30,10 +30,19 @@ func ValidateClientCommonConfig(c *v1.ClientCommonConfig) (Warning, error) {
 		errs     error
 	)
 	if !lo.Contains(SupportedAuthMethods, c.Auth.Method) {
-		errs = AppendError(errs, fmt.Errorf("invalid auth method, optional values are %v", SupportedAuthMethods))
+		errs = AppendError(
+			errs,
+			fmt.Errorf("invalid auth method, optional values are %v", SupportedAuthMethods),
+		)
 	}
 	if !lo.Every(SupportedAuthAdditionalScopes, c.Auth.AdditionalScopes) {
-		errs = AppendError(errs, fmt.Errorf("invalid auth additional scopes, optional values are %v", SupportedAuthAdditionalScopes))
+		errs = AppendError(
+			errs,
+			fmt.Errorf(
+				"invalid auth additional scopes, optional values are %v",
+				SupportedAuthAdditionalScopes,
+			),
+		)
 	}
 
 	if err := validateLogConfig(&c.Log); err != nil {
@@ -46,7 +55,12 @@ func ValidateClientCommonConfig(c *v1.ClientCommonConfig) (Warning, error) {
 
 	if c.Transport.HeartbeatTimeout > 0 && c.Transport.HeartbeatInterval > 0 {
 		if c.Transport.HeartbeatTimeout < c.Transport.HeartbeatInterval {
-			errs = AppendError(errs, fmt.Errorf("invalid transport.heartbeatTimeout, heartbeat timeout should not less than heartbeat interval"))
+			errs = AppendError(
+				errs,
+				fmt.Errorf(
+					"invalid transport.heartbeatTimeout, heartbeat timeout should not less than heartbeat interval",
+				),
+			)
 		}
 	}
 
@@ -58,19 +72,37 @@ func ValidateClientCommonConfig(c *v1.ClientCommonConfig) (Warning, error) {
 			return nil
 		}
 
-		warnings = AppendError(warnings, checkTLSConfig("transport.tls.certFile", c.Transport.TLS.CertFile))
-		warnings = AppendError(warnings, checkTLSConfig("transport.tls.keyFile", c.Transport.TLS.KeyFile))
-		warnings = AppendError(warnings, checkTLSConfig("transport.tls.trustedCaFile", c.Transport.TLS.TrustedCaFile))
+		warnings = AppendError(
+			warnings,
+			checkTLSConfig("transport.tls.certFile", c.Transport.TLS.CertFile),
+		)
+		warnings = AppendError(
+			warnings,
+			checkTLSConfig("transport.tls.keyFile", c.Transport.TLS.KeyFile),
+		)
+		warnings = AppendError(
+			warnings,
+			checkTLSConfig("transport.tls.trustedCaFile", c.Transport.TLS.TrustedCaFile),
+		)
 	}
 
 	if !lo.Contains(SupportedTransportProtocols, c.Transport.Protocol) {
-		errs = AppendError(errs, fmt.Errorf("invalid transport.protocol, optional values are %v", SupportedTransportProtocols))
+		errs = AppendError(
+			errs,
+			fmt.Errorf(
+				"invalid transport.protocol, optional values are %v",
+				SupportedTransportProtocols,
+			),
+		)
 	}
 
 	for _, f := range c.IncludeConfigFiles {
 		absDir, err := filepath.Abs(filepath.Dir(f))
 		if err != nil {
-			errs = AppendError(errs, fmt.Errorf("include: parse directory of %s failed: %v", f, err))
+			errs = AppendError(
+				errs,
+				fmt.Errorf("include: parse directory of %s failed: %v", f, err),
+			)
 			continue
 		}
 		if _, err := os.Stat(absDir); os.IsNotExist(err) {
@@ -80,7 +112,11 @@ func ValidateClientCommonConfig(c *v1.ClientCommonConfig) (Warning, error) {
 	return warnings, errs
 }
 
-func ValidateAllClientConfig(c *v1.ClientCommonConfig, proxyCfgs []v1.ProxyConfigurer, visitorCfgs []v1.VisitorConfigurer) (Warning, error) {
+func ValidateAllClientConfig(
+	c *v1.ClientCommonConfig,
+	forwardCfgs []v1.ForwardConfigurer,
+	visitorCfgs []v1.VisitorConfigurer,
+) (Warning, error) {
 	var warnings Warning
 	if c != nil {
 		warning, err := ValidateClientCommonConfig(c)
@@ -90,9 +126,9 @@ func ValidateAllClientConfig(c *v1.ClientCommonConfig, proxyCfgs []v1.ProxyConfi
 		}
 	}
 
-	for _, c := range proxyCfgs {
-		if err := ValidateProxyConfigurerForClient(c); err != nil {
-			return warnings, fmt.Errorf("proxy %s: %v", c.GetBaseConfig().Name, err)
+	for _, c := range forwardCfgs {
+		if err := ValidateForwardConfigurerForClient(c); err != nil {
+			return warnings, fmt.Errorf("forward %s: %v", c.GetBaseConfig().Name, err)
 		}
 	}
 

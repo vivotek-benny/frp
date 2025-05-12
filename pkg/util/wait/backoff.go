@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fatedier/frp/pkg/util/util"
+	"monitoragent/pkg/util/util"
 )
 
 type BackoffFunc func(previousDuration time.Duration, previousConditionError bool) time.Duration

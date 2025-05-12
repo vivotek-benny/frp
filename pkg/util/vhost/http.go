@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,8 +31,8 @@ import (
 	libio "github.com/fatedier/golib/io"
 	"github.com/fatedier/golib/pool"
 
-	httppkg "github.com/fatedier/frp/pkg/util/http"
-	logpkg "github.com/fatedier/frp/pkg/util/log"
+	httppkg "monitoragent/pkg/util/http"
+	logpkg "monitoragent/pkg/util/log"
 )
 
 var ErrNoRouteFound = errors.New("no route found")
@@ -90,7 +90,7 @@ func NewHTTPReverseProxy(option HTTPReverseProxyOptions, vhostRouter *Routers) *
 				req.URL.Host = req.Host
 			}
 		},
-		// Create a connection to one proxy routed by route policy.
+		// Create a connection to one forward routed by route policy.
 		Transport: &http.Transport{
 			ResponseHeaderTimeout: rp.responseHeaderTimeout,
 			IdleConnTimeout:       60 * time.Second,
@@ -99,7 +99,7 @@ func NewHTTPReverseProxy(option HTTPReverseProxyOptions, vhostRouter *Routers) *
 				return rp.CreateConnection(ctx.Value(RouteInfoKey).(*RequestRouteInfo), true)
 			},
 			Proxy: func(req *http.Request) (*url.URL, error) {
-				// Use proxy mode if there is host in HTTP first request line.
+				// Use forward mode if there is host in HTTP first request line.
 				// GET http://example.com/ HTTP/1.1
 				// Host: example.com
 				//
@@ -116,7 +116,7 @@ func NewHTTPReverseProxy(option HTTPReverseProxyOptions, vhostRouter *Routers) *
 		BufferPool: newWrapPool(),
 		ErrorLog:   log.New(newWrapLogger(), "", 0),
 		ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
-			logpkg.Warn("do http proxy request [host: %s] error: %v", req.Host, err)
+			logpkg.Warn("do http forward request [host: %s] error: %v", req.Host, err)
 			rw.WriteHeader(http.StatusNotFound)
 			_, _ = rw.Write(getNotFoundPageContent())
 		},
@@ -125,8 +125,8 @@ func NewHTTPReverseProxy(option HTTPReverseProxyOptions, vhostRouter *Routers) *
 	return rp
 }
 
-// Register register the route config to reverse proxy
-// reverse proxy will use CreateConnFn from routeCfg to create a connection to the remote service
+// Register register the route config to reverse forward
+// reverse forward will use CreateConnFn from routeCfg to create a connection to the remote service
 func (rp *HTTPReverseProxy) Register(routeCfg RouteConfig) error {
 	err := rp.vhostRouter.Add(routeCfg.Domain, routeCfg.Location, routeCfg.RouteByHTTPUser, &routeCfg)
 	if err != nil {
@@ -195,7 +195,7 @@ func (rp *HTTPReverseProxy) getVhost(domain, location, routeByHTTPUser string) (
 		if ok {
 			return vr, ok
 		}
-		// Try to check if there is one proxy that doesn't specify routerByHTTPUser, it means match all.
+		// Try to check if there is one forward that doesn't specify routerByHTTPUser, it means match all.
 		vr, ok = rp.vhostRouter.Get(inDomain, inLocation, "")
 		if ok {
 			return vr, ok
@@ -228,7 +228,7 @@ func (rp *HTTPReverseProxy) getVhost(domain, location, routeByHTTPUser string) (
 		domainSplit = domainSplit[1:]
 	}
 
-	// Finally, try to check if there is one proxy that domain is "*" means match all domains.
+	// Finally, try to check if there is one forward that domain is "*" means match all domains.
 	vr, ok = findRouter("*", location, routeByHTTPUser)
 	if ok {
 		return vr, true
@@ -279,7 +279,7 @@ func parseBasicAuth(auth string) (username, password string, ok bool) {
 
 func (rp *HTTPReverseProxy) injectRequestInfoToCtx(req *http.Request) *http.Request {
 	user := ""
-	// If url host isn't empty, it's a proxy request. Get http user from Proxy-Authorization header.
+	// If url host isn't empty, it's a forward request. Get http user from Proxy-Authorization header.
 	if req.URL.Host != "" {
 		proxyAuth := req.Header.Get("Proxy-Authorization")
 		if proxyAuth != "" {

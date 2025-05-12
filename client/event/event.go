@@ -3,17 +3,17 @@ package event
 import (
 	"errors"
 
-	"github.com/fatedier/frp/pkg/msg"
+	"monitoragent/pkg/msg"
 )
 
 var ErrPayloadType = errors.New("error payload type")
 
 type Handler func(payload interface{}) error
 
-type StartProxyPayload struct {
-	NewProxyMsg *msg.NewProxy
+type StartForwardPayload struct {
+	NewForwardMsg *msg.NewForward
 }
 
-type CloseProxyPayload struct {
-	CloseProxyMsg *msg.CloseProxy
+type CloseForwardPayload struct {
+	CloseForwardMsg *msg.CloseForward
 }

@@ -7,12 +7,12 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	plugin "github.com/fatedier/frp/pkg/plugin/server"
-	"github.com/fatedier/frp/test/e2e/framework"
-	"github.com/fatedier/frp/test/e2e/framework/consts"
-	"github.com/fatedier/frp/test/e2e/mock/server/streamserver"
-	pluginpkg "github.com/fatedier/frp/test/e2e/pkg/plugin"
-	"github.com/fatedier/frp/test/e2e/pkg/request"
+	plugin "monitoragent/pkg/plugin/server"
+	"monitoragent/test/e2e/framework"
+	"monitoragent/test/e2e/framework/consts"
+	"monitoragent/test/e2e/mock/server/streamserver"
+	pluginpkg "monitoragent/test/e2e/pkg/plugin"
+	"monitoragent/test/e2e/pkg/request"
 )
 
 var _ = ginkgo.Describe("[Feature: Bandwidth Limit]", func() {
@@ -53,13 +53,13 @@ var _ = ginkgo.Describe("[Feature: Bandwidth Limit]", func() {
 		// new test plugin server
 		newFunc := func() *plugin.Request {
 			var r plugin.Request
-			r.Content = &plugin.NewProxyContent{}
+			r.Content = &plugin.NewForwardContent{}
 			return &r
 		}
 		pluginPort := f.AllocPort()
 		handler := func(req *plugin.Request) *plugin.Response {
 			var ret plugin.Response
-			content := req.Content.(*plugin.NewProxyContent)
+			content := req.Content.(*plugin.NewForwardContent)
 			content.BandwidthLimit = "10KB"
 			content.BandwidthLimitMode = "server"
 			ret.Content = content

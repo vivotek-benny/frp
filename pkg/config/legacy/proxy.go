@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,71 +20,71 @@ import (
 
 	"gopkg.in/ini.v1"
 
-	"github.com/fatedier/frp/pkg/config/types"
+	"monitoragent/pkg/config/types"
 )
 
-type ProxyType string
+type ForwardType string
 
 const (
-	ProxyTypeTCP    ProxyType = "tcp"
-	ProxyTypeUDP    ProxyType = "udp"
-	ProxyTypeTCPMUX ProxyType = "tcpmux"
-	ProxyTypeHTTP   ProxyType = "http"
-	ProxyTypeHTTPS  ProxyType = "https"
-	ProxyTypeSTCP   ProxyType = "stcp"
-	ProxyTypeXTCP   ProxyType = "xtcp"
-	ProxyTypeSUDP   ProxyType = "sudp"
+	ForwardTypeTCP    ForwardType = "tcp"
+	ForwardTypeUDP    ForwardType = "udp"
+	ForwardTypeTCPMUX ForwardType = "tcpmux"
+	ForwardTypeHTTP   ForwardType = "http"
+	ForwardTypeHTTPS  ForwardType = "https"
+	ForwardTypeSTCP   ForwardType = "stcp"
+	ForwardTypeXTCP   ForwardType = "xtcp"
+	ForwardTypeSUDP   ForwardType = "sudp"
 )
 
 // Proxy
 var (
-	proxyConfTypeMap = map[ProxyType]reflect.Type{
-		ProxyTypeTCP:    reflect.TypeOf(TCPProxyConf{}),
-		ProxyTypeUDP:    reflect.TypeOf(UDPProxyConf{}),
-		ProxyTypeTCPMUX: reflect.TypeOf(TCPMuxProxyConf{}),
-		ProxyTypeHTTP:   reflect.TypeOf(HTTPProxyConf{}),
-		ProxyTypeHTTPS:  reflect.TypeOf(HTTPSProxyConf{}),
-		ProxyTypeSTCP:   reflect.TypeOf(STCPProxyConf{}),
-		ProxyTypeXTCP:   reflect.TypeOf(XTCPProxyConf{}),
-		ProxyTypeSUDP:   reflect.TypeOf(SUDPProxyConf{}),
+	forwardConfTypeMap = map[ForwardType]reflect.Type{
+		ForwardTypeTCP:    reflect.TypeOf(TCPForwardConf{}),
+		ForwardTypeUDP:    reflect.TypeOf(UDPForwardConf{}),
+		ForwardTypeTCPMUX: reflect.TypeOf(TCPMuxForwardConf{}),
+		ForwardTypeHTTP:   reflect.TypeOf(HTTPForwardConf{}),
+		ForwardTypeHTTPS:  reflect.TypeOf(HTTPSForwardConf{}),
+		ForwardTypeSTCP:   reflect.TypeOf(STCPForwardConf{}),
+		ForwardTypeXTCP:   reflect.TypeOf(XTCPForwardConf{}),
+		ForwardTypeSUDP:   reflect.TypeOf(SUDPForwardConf{}),
 	}
 )
 
-type ProxyConf interface {
-	// GetBaseConfig returns the BaseProxyConf for this config.
-	GetBaseConfig() *BaseProxyConf
+type ForwardConf interface {
+	// GetBaseConfig returns the BaseForwardConf for this config.
+	GetBaseConfig() *BaseForwardConf
 	// UnmarshalFromIni unmarshals a ini.Section into this config. This function
-	// will be called on the frpc side.
+	// will be called on the monitoragentc side.
 	UnmarshalFromIni(string, string, *ini.Section) error
 }
 
-func NewConfByType(proxyType ProxyType) ProxyConf {
-	v, ok := proxyConfTypeMap[proxyType]
+func NewConfByType(forwardType ForwardType) ForwardConf {
+	v, ok := forwardConfTypeMap[forwardType]
 	if !ok {
 		return nil
 	}
-	cfg := reflect.New(v).Interface().(ProxyConf)
+	cfg := reflect.New(v).Interface().(ForwardConf)
 	return cfg
 }
 
-// Proxy Conf Loader
-// DefaultProxyConf creates a empty ProxyConf object by proxyType.
-// If proxyType doesn't exist, return nil.
-func DefaultProxyConf(proxyType ProxyType) ProxyConf {
-	return NewConfByType(proxyType)
+// Forward Conf Loader
+// DefaultForwardConf creates a empty ForwardConf object by forwardType.
+// If forwardType doesn't exist, return nil.
+func DefaultForwardConf(forwardType ForwardType) ForwardConf {
+	return NewConfByType(forwardType)
 }
 
-// Proxy loaded from ini
-func NewProxyConfFromIni(prefix, name string, section *ini.Section) (ProxyConf, error) {
+// Forward loaded from ini
+func NewForwardConfFromIni(prefix, name string, section *ini.Section) (ForwardConf, error) {
 	// section.Key: if key not exists, section will set it with default value.
-	proxyType := ProxyType(section.Key("type").String())
-	if proxyType == "" {
-		proxyType = ProxyTypeTCP
+	forwardType := ForwardType(section.Key("type").String())
+	if forwardType == "" {
+		forwardType = ForwardTypeTCP
 	}
 
-	conf := DefaultProxyConf(proxyType)
+	conf := DefaultForwardConf(forwardType)
 	if conf == nil {
-		return nil, fmt.Errorf("invalid type [%s]", proxyType)
+		return nil, fmt.Errorf("invalid type [%s]", forwardType)
 	}
 
 	if err := conf.UnmarshalFromIni(prefix, name, section); err != nil {
@@ -142,14 +142,14 @@ type HealthCheckConf struct {
 	HealthCheckAddr string `ini:"-"`
 }
 
-// BaseProxyConf provides configuration info that is common to all types.
-type BaseProxyConf struct {
-	// ProxyName is the name of this
-	ProxyName string `ini:"name" json:"name"`
-	// ProxyType specifies the type of this  Valid values include "tcp",
+// BaseForwardConf provides configuration info that is common to all types.
+type BaseForwardConf struct {
+	// ForwardName is the name of this
+	ForwardName string `ini:"name" json:"name"`
+	// ForwardType specifies the type of this  Valid values include "tcp",
 	// "udp", "http", "https", "stcp", and "xtcp". By default, this value is
 	// "tcp".
-	ProxyType string `ini:"type" json:"type"`
+	ForwardType string `ini:"type" json:"type"`
 
 	// UseEncryption controls whether or not communication with the server will
 	// be encrypted. Encryption is done using the tokens supplied in the server
@@ -187,13 +187,13 @@ type BaseProxyConf struct {
 }
 
 // Base
-func (cfg *BaseProxyConf) GetBaseConfig() *BaseProxyConf {
+func (cfg *BaseForwardConf) GetBaseConfig() *BaseForwardConf {
 	return cfg
 }
 
-// BaseProxyConf apply custom logic changes.
-func (cfg *BaseProxyConf) decorate(_ string, name string, section *ini.Section) error {
-	cfg.ProxyName = name
+// BaseForwardConf apply custom logic changes.
+func (cfg *BaseForwardConf) decorate(_ string, name string, section *ini.Section) error {
+	cfg.ForwardName = name
 	// metas_xxx
 	cfg.Metas = GetMapWithoutPrefix(section.KeysHash(), "meta_")
 
@@ -222,9 +222,9 @@ type RoleServerCommonConf struct {
 }
 
 // HTTP
-type HTTPProxyConf struct {
-	BaseProxyConf `ini:",extends"`
-	DomainConf    `ini:",extends"`
+type HTTPForwardConf struct {
+	BaseForwardConf `ini:",extends"`
+	DomainConf      `ini:",extends"`
 
 	Locations         []string          `ini:"locations" json:"locations"`
 	HTTPUser          string            `ini:"http_user" json:"http_user"`
@@ -234,7 +234,7 @@ type HTTPProxyConf struct {
 	RouteByHTTPUser   string            `ini:"route_by_http_user" json:"route_by_http_user"`
 }
 
-func (cfg *HTTPProxyConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
+func (cfg *HTTPForwardConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
 	err := preUnmarshalFromIni(cfg, prefix, name, section)
 	if err != nil {
 		return err
@@ -246,12 +246,12 @@ func (cfg *HTTPProxyConf) UnmarshalFromIni(prefix string, name string, section *
 }
 
 // HTTPS
-type HTTPSProxyConf struct {
-	BaseProxyConf `ini:",extends"`
-	DomainConf    `ini:",extends"`
+type HTTPSForwardConf struct {
+	BaseForwardConf `ini:",extends"`
+	DomainConf      `ini:",extends"`
 }
 
-func (cfg *HTTPSProxyConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
+func (cfg *HTTPSForwardConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
 	err := preUnmarshalFromIni(cfg, prefix, name, section)
 	if err != nil {
 		return err
@@ -262,12 +262,12 @@ func (cfg *HTTPSProxyConf) UnmarshalFromIni(prefix string, name string, section 
 }
 
 // TCP
-type TCPProxyConf struct {
-	BaseProxyConf `ini:",extends"`
-	RemotePort    int `ini:"remote_port" json:"remote_port"`
+type TCPForwardConf struct {
+	BaseForwardConf `ini:",extends"`
+	RemotePort      int `ini:"remote_port" json:"remote_port"`
 }
 
-func (cfg *TCPProxyConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
+func (cfg *TCPForwardConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
 	err := preUnmarshalFromIni(cfg, prefix, name, section)
 	if err != nil {
 		return err
@@ -279,13 +279,13 @@ func (cfg *TCPProxyConf) UnmarshalFromIni(prefix string, name string, section *i
 }
 
 // UDP
-type UDPProxyConf struct {
-	BaseProxyConf `ini:",extends"`
+type UDPForwardConf struct {
+	BaseForwardConf `ini:",extends"`
 
 	RemotePort int `ini:"remote_port" json:"remote_port"`
 }
 
-func (cfg *UDPProxyConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
+func (cfg *UDPForwardConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
 	err := preUnmarshalFromIni(cfg, prefix, name, section)
 	if err != nil {
 		return err
@@ -297,8 +297,8 @@ func (cfg *UDPProxyConf) UnmarshalFromIni(prefix string, name string, section *i
 }
 
 // TCPMux
-type TCPMuxProxyConf struct {
-	BaseProxyConf   `ini:",extends"`
+type TCPMuxForwardConf struct {
+	BaseForwardConf `ini:",extends"`
 	DomainConf      `ini:",extends"`
 	HTTPUser        string `ini:"http_user" json:"http_user,omitempty"`
 	HTTPPwd         string `ini:"http_pwd" json:"http_pwd,omitempty"`
@@ -307,7 +307,7 @@ type TCPMuxProxyConf struct {
 	Multiplexer string `ini:"multiplexer"`
 }
 
-func (cfg *TCPMuxProxyConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
+func (cfg *TCPMuxForwardConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
 	err := preUnmarshalFromIni(cfg, prefix, name, section)
 	if err != nil {
 		return err
@@ -319,12 +319,12 @@ func (cfg *TCPMuxProxyConf) UnmarshalFromIni(prefix string, name string, section
 }
 
 // STCP
-type STCPProxyConf struct {
-	BaseProxyConf        `ini:",extends"`
+type STCPForwardConf struct {
+	BaseForwardConf      `ini:",extends"`
 	RoleServerCommonConf `ini:",extends"`
 }
 
-func (cfg *STCPProxyConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
+func (cfg *STCPForwardConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
 	err := preUnmarshalFromIni(cfg, prefix, name, section)
 	if err != nil {
 		return err
@@ -338,12 +338,12 @@ func (cfg *STCPProxyConf) UnmarshalFromIni(prefix string, name string, section *
 }
 
 // XTCP
-type XTCPProxyConf struct {
-	BaseProxyConf        `ini:",extends"`
+type XTCPForwardConf struct {
+	BaseForwardConf      `ini:",extends"`
 	RoleServerCommonConf `ini:",extends"`
 }
 
-func (cfg *XTCPProxyConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
+func (cfg *XTCPForwardConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
 	err := preUnmarshalFromIni(cfg, prefix, name, section)
 	if err != nil {
 		return err
@@ -357,12 +357,12 @@ func (cfg *XTCPProxyConf) UnmarshalFromIni(prefix string, name string, section *
 }
 
 // SUDP
-type SUDPProxyConf struct {
-	BaseProxyConf        `ini:",extends"`
+type SUDPForwardConf struct {
+	BaseForwardConf      `ini:",extends"`
 	RoleServerCommonConf `ini:",extends"`
 }
 
-func (cfg *SUDPProxyConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
+func (cfg *SUDPForwardConf) UnmarshalFromIni(prefix string, name string, section *ini.Section) error {
 	err := preUnmarshalFromIni(cfg, prefix, name, section)
 	if err != nil {
 		return err
@@ -372,7 +372,7 @@ func (cfg *SUDPProxyConf) UnmarshalFromIni(prefix string, name string, section *
 	return nil
 }
 
-func preUnmarshalFromIni(cfg ProxyConf, prefix string, name string, section *ini.Section) error {
+func preUnmarshalFromIni(cfg ForwardConf, prefix string, name string, section *ini.Section) error {
 	err := section.MapTo(cfg)
 	if err != nil {
 		return err

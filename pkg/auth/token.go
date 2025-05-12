@@ -20,9 +20,9 @@ import (
 
 	"github.com/samber/lo"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/util/util"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/util/util"
 )
 
 type TokenAuthSetterVerifier struct {
@@ -37,7 +37,7 @@ func NewTokenAuth(additionalAuthScopes []v1.AuthScope, token string) *TokenAuthS
 	}
 }
 
-func (auth *TokenAuthSetterVerifier) SetLogin(loginMsg *msg.Login) error {
+func (auth *TokenAuthSetterVerifier) SetLogin(loginMsg *msg.Handshake) error {
 	loginMsg.PrivilegeKey = util.GetAuthKey(auth.token, loginMsg.Timestamp)
 	return nil
 }
@@ -62,7 +62,7 @@ func (auth *TokenAuthSetterVerifier) SetNewWorkConn(newWorkConnMsg *msg.NewWorkC
 	return nil
 }
 
-func (auth *TokenAuthSetterVerifier) VerifyLogin(m *msg.Login) error {
+func (auth *TokenAuthSetterVerifier) VerifyLogin(m *msg.Handshake) error {
 	if !util.ConstantTimeEqString(util.GetAuthKey(auth.token, m.Timestamp), m.PrivilegeKey) {
 		return fmt.Errorf("token in login doesn't match token from configuration")
 	}

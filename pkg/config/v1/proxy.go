@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,9 +23,9 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/fatedier/frp/pkg/config/types"
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/util/util"
+	"monitoragent/pkg/config/types"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/util/util"
 )
 
 type ProxyTransport struct {
@@ -43,10 +43,10 @@ type ProxyTransport struct {
 	// client or server side. Valid values include "client" and "server".
 	// By default, this value is "client".
 	BandwidthLimitMode string `json:"bandwidthLimitMode,omitempty"`
-	// ProxyProtocolVersion specifies which protocol version to use. Valid
+	// ForwardProtocolVersion specifies which protocol version to use. Valid
 	// values include "v1", "v2", and "". If the value is "", a protocol
 	// version will be automatically selected. By default, this value is "".
-	ProxyProtocolVersion string `json:"proxyProtocolVersion,omitempty"`
+	ForwardProtocolVersion string `json:"forwardProtocolVersion,omitempty"`
 }
 
 type LoadBalancerConfig struct {
@@ -104,7 +104,7 @@ type DomainConfig struct {
 	SubDomain     string   `json:"subdomain,omitempty"`
 }
 
-type ProxyBaseConfig struct {
+type ForwardBaseConfig struct {
 	Name      string         `json:"name"`
 	Type      string         `json:"type"`
 	Transport ProxyTransport `json:"transport,omitempty"`
@@ -115,19 +115,22 @@ type ProxyBaseConfig struct {
 	ProxyBackend
 }
 
-func (c *ProxyBaseConfig) GetBaseConfig() *ProxyBaseConfig {
+func (c *ForwardBaseConfig) GetBaseConfig() *ForwardBaseConfig {
 	return c
 }
 
-func (c *ProxyBaseConfig) Complete(namePrefix string) {
+func (c *ForwardBaseConfig) Complete(namePrefix string) {
 	c.Name = lo.Ternary(namePrefix == "", "", namePrefix+".") + c.Name
 	c.LocalIP = util.EmptyOr(c.LocalIP, "127.0.0.1")
-	c.Transport.BandwidthLimitMode = util.EmptyOr(c.Transport.BandwidthLimitMode, types.BandwidthLimitModeClient)
+	c.Transport.BandwidthLimitMode = util.EmptyOr(
+		c.Transport.BandwidthLimitMode,
+		types.BandwidthLimitModeClient,
+	)
 }
 
-func (c *ProxyBaseConfig) MarshalToMsg(m *msg.NewProxy) {
-	m.ProxyName = c.Name
-	m.ProxyType = c.Type
+func (c *ForwardBaseConfig) MarshalToMsg(m *msg.NewForward) {
+	m.ForwardName = c.Name
+	m.ForwardType = c.Type
 	m.UseEncryption = c.Transport.UseEncryption
 	m.UseCompression = c.Transport.UseCompression
 	m.BandwidthLimit = c.Transport.BandwidthLimit.String()
@@ -140,9 +143,9 @@ func (c *ProxyBaseConfig) MarshalToMsg(m *msg.NewProxy) {
 	m.Metas = c.Metadatas
 }
 
-func (c *ProxyBaseConfig) UnmarshalFromMsg(m *msg.NewProxy) {
-	c.Name = m.ProxyName
-	c.Type = m.ProxyType
+func (c *ForwardBaseConfig) UnmarshalFromMsg(m *msg.NewForward) {
+	c.Name = m.ForwardName
+	c.Type = m.ForwardType
 	c.Transport.UseEncryption = m.UseEncryption
 	c.Transport.UseCompression = m.UseCompression
 	if m.BandwidthLimit != "" {
@@ -158,7 +161,7 @@ func (c *ProxyBaseConfig) UnmarshalFromMsg(m *msg.NewProxy) {
 
 type TypedProxyConfig struct {
 	Type string `json:"type"`
-	ProxyConfigurer
+	ForwardConfigurer
 }
 
 func (c *TypedProxyConfig) UnmarshalJSON(b []byte) error {
@@ -174,7 +177,7 @@ func (c *TypedProxyConfig) UnmarshalJSON(b []byte) error {
 	}
 
 	c.Type = typeStruct.Type
-	configurer := NewProxyConfigurerByType(ProxyType(typeStruct.Type))
+	configurer := NewForwardConfigurerByType(ForwardType(typeStruct.Type))
 	if configurer == nil {
 		return fmt.Errorf("unknown proxy type: %s", typeStruct.Type)
 	}
@@ -185,99 +188,99 @@ func (c *TypedProxyConfig) UnmarshalJSON(b []byte) error {
 	if err := decoder.Decode(configurer); err != nil {
 		return err
 	}
-	c.ProxyConfigurer = configurer
+	c.ForwardConfigurer = configurer
 	return nil
 }
 
-type ProxyConfigurer interface {
+type ForwardConfigurer interface {
 	Complete(namePrefix string)
-	GetBaseConfig() *ProxyBaseConfig
+	GetBaseConfig() *ForwardBaseConfig
 	// MarshalToMsg marshals this config into a msg.NewProxy message. This
-	// function will be called on the frpc side.
-	MarshalToMsg(*msg.NewProxy)
+	// function will be called on the monitoragentc side.
+	MarshalToMsg(*msg.NewForward)
 	// UnmarshalFromMsg unmarshals a msg.NewProxy message into this config.
-	// This function will be called on the frps side.
-	UnmarshalFromMsg(*msg.NewProxy)
+	// This function will be called on the monitoragents side.
+	UnmarshalFromMsg(*msg.NewForward)
 }
 
-type ProxyType string
+type ForwardType string
 
 const (
-	ProxyTypeTCP    ProxyType = "tcp"
-	ProxyTypeUDP    ProxyType = "udp"
-	ProxyTypeTCPMUX ProxyType = "tcpmux"
-	ProxyTypeHTTP   ProxyType = "http"
-	ProxyTypeHTTPS  ProxyType = "https"
-	ProxyTypeSTCP   ProxyType = "stcp"
-	ProxyTypeXTCP   ProxyType = "xtcp"
-	ProxyTypeSUDP   ProxyType = "sudp"
+	ForwardTypeTCP    ForwardType = "tcp"
+	ForwardTypeUDP    ForwardType = "udp"
+	ForwardTypeTCPMUX ForwardType = "tcpmux"
+	ForwardTypeHTTP   ForwardType = "http"
+	ForwardTypeHTTPS  ForwardType = "https"
+	ForwardTypeSTCP   ForwardType = "stcp"
+	ForwardTypeXTCP   ForwardType = "xtcp"
+	ForwardTypeSUDP   ForwardType = "sudp"
 )
 
-var proxyConfigTypeMap = map[ProxyType]reflect.Type{
-	ProxyTypeTCP:    reflect.TypeOf(TCPProxyConfig{}),
-	ProxyTypeUDP:    reflect.TypeOf(UDPProxyConfig{}),
-	ProxyTypeHTTP:   reflect.TypeOf(HTTPProxyConfig{}),
-	ProxyTypeHTTPS:  reflect.TypeOf(HTTPSProxyConfig{}),
-	ProxyTypeTCPMUX: reflect.TypeOf(TCPMuxProxyConfig{}),
-	ProxyTypeSTCP:   reflect.TypeOf(STCPProxyConfig{}),
-	ProxyTypeXTCP:   reflect.TypeOf(XTCPProxyConfig{}),
-	ProxyTypeSUDP:   reflect.TypeOf(SUDPProxyConfig{}),
+var proxyConfigTypeMap = map[ForwardType]reflect.Type{
+	ForwardTypeTCP:    reflect.TypeOf(TCPForwardConfig{}),
+	ForwardTypeUDP:    reflect.TypeOf(UDPForwardConfig{}),
+	ForwardTypeHTTP:   reflect.TypeOf(HTTPForwardConfig{}),
+	ForwardTypeHTTPS:  reflect.TypeOf(HTTPSForwardConfig{}),
+	ForwardTypeTCPMUX: reflect.TypeOf(TCPMuxForwardConfig{}),
+	ForwardTypeSTCP:   reflect.TypeOf(STCPForwardConfig{}),
+	ForwardTypeXTCP:   reflect.TypeOf(XTCPForwardConfig{}),
+	ForwardTypeSUDP:   reflect.TypeOf(SUDPForwardConfig{}),
 }
 
-func NewProxyConfigurerByType(proxyType ProxyType) ProxyConfigurer {
+func NewForwardConfigurerByType(proxyType ForwardType) ForwardConfigurer {
 	v, ok := proxyConfigTypeMap[proxyType]
 	if !ok {
 		return nil
 	}
-	pc := reflect.New(v).Interface().(ProxyConfigurer)
+	pc := reflect.New(v).Interface().(ForwardConfigurer)
 	pc.GetBaseConfig().Type = string(proxyType)
 	return pc
 }
 
-var _ ProxyConfigurer = &TCPProxyConfig{}
+var _ ForwardConfigurer = &TCPForwardConfig{}
 
-type TCPProxyConfig struct {
-	ProxyBaseConfig
-
-	RemotePort int `json:"remotePort,omitempty"`
-}
-
-func (c *TCPProxyConfig) MarshalToMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.MarshalToMsg(m)
-
-	m.RemotePort = c.RemotePort
-}
-
-func (c *TCPProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.UnmarshalFromMsg(m)
-
-	c.RemotePort = m.RemotePort
-}
-
-var _ ProxyConfigurer = &UDPProxyConfig{}
-
-type UDPProxyConfig struct {
-	ProxyBaseConfig
+type TCPForwardConfig struct {
+	ForwardBaseConfig
 
 	RemotePort int `json:"remotePort,omitempty"`
 }
 
-func (c *UDPProxyConfig) MarshalToMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.MarshalToMsg(m)
+func (c *TCPForwardConfig) MarshalToMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.MarshalToMsg(m)
 
 	m.RemotePort = c.RemotePort
 }
 
-func (c *UDPProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.UnmarshalFromMsg(m)
+func (c *TCPForwardConfig) UnmarshalFromMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.UnmarshalFromMsg(m)
 
 	c.RemotePort = m.RemotePort
 }
 
-var _ ProxyConfigurer = &HTTPProxyConfig{}
+var _ ForwardConfigurer = &UDPForwardConfig{}
 
-type HTTPProxyConfig struct {
-	ProxyBaseConfig
+type UDPForwardConfig struct {
+	ForwardBaseConfig
+
+	RemotePort int `json:"remotePort,omitempty"`
+}
+
+func (c *UDPForwardConfig) MarshalToMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.MarshalToMsg(m)
+
+	m.RemotePort = c.RemotePort
+}
+
+func (c *UDPForwardConfig) UnmarshalFromMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.UnmarshalFromMsg(m)
+
+	c.RemotePort = m.RemotePort
+}
+
+var _ ForwardConfigurer = &HTTPForwardConfig{}
+
+type HTTPForwardConfig struct {
+	ForwardBaseConfig
 	DomainConfig
 
 	Locations         []string         `json:"locations,omitempty"`
@@ -288,8 +291,8 @@ type HTTPProxyConfig struct {
 	RouteByHTTPUser   string           `json:"routeByHTTPUser,omitempty"`
 }
 
-func (c *HTTPProxyConfig) MarshalToMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.MarshalToMsg(m)
+func (c *HTTPForwardConfig) MarshalToMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.MarshalToMsg(m)
 
 	m.CustomDomains = c.CustomDomains
 	m.SubDomain = c.SubDomain
@@ -301,8 +304,8 @@ func (c *HTTPProxyConfig) MarshalToMsg(m *msg.NewProxy) {
 	m.RouteByHTTPUser = c.RouteByHTTPUser
 }
 
-func (c *HTTPProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.UnmarshalFromMsg(m)
+func (c *HTTPForwardConfig) UnmarshalFromMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.UnmarshalFromMsg(m)
 
 	c.CustomDomains = m.CustomDomains
 	c.SubDomain = m.SubDomain
@@ -314,22 +317,22 @@ func (c *HTTPProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
 	c.RouteByHTTPUser = m.RouteByHTTPUser
 }
 
-var _ ProxyConfigurer = &HTTPSProxyConfig{}
+var _ ForwardConfigurer = &HTTPSForwardConfig{}
 
-type HTTPSProxyConfig struct {
-	ProxyBaseConfig
+type HTTPSForwardConfig struct {
+	ForwardBaseConfig
 	DomainConfig
 }
 
-func (c *HTTPSProxyConfig) MarshalToMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.MarshalToMsg(m)
+func (c *HTTPSForwardConfig) MarshalToMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.MarshalToMsg(m)
 
 	m.CustomDomains = c.CustomDomains
 	m.SubDomain = c.SubDomain
 }
 
-func (c *HTTPSProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.UnmarshalFromMsg(m)
+func (c *HTTPSForwardConfig) UnmarshalFromMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.UnmarshalFromMsg(m)
 
 	c.CustomDomains = m.CustomDomains
 	c.SubDomain = m.SubDomain
@@ -341,10 +344,10 @@ const (
 	TCPMultiplexerHTTPConnect TCPMultiplexerType = "httpconnect"
 )
 
-var _ ProxyConfigurer = &TCPMuxProxyConfig{}
+var _ ForwardConfigurer = &TCPMuxForwardConfig{}
 
-type TCPMuxProxyConfig struct {
-	ProxyBaseConfig
+type TCPMuxForwardConfig struct {
+	ForwardBaseConfig
 	DomainConfig
 
 	HTTPUser        string `json:"httpUser,omitempty"`
@@ -353,8 +356,8 @@ type TCPMuxProxyConfig struct {
 	Multiplexer     string `json:"multiplexer,omitempty"`
 }
 
-func (c *TCPMuxProxyConfig) MarshalToMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.MarshalToMsg(m)
+func (c *TCPMuxForwardConfig) MarshalToMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.MarshalToMsg(m)
 
 	m.CustomDomains = c.CustomDomains
 	m.SubDomain = c.SubDomain
@@ -364,8 +367,8 @@ func (c *TCPMuxProxyConfig) MarshalToMsg(m *msg.NewProxy) {
 	m.RouteByHTTPUser = c.RouteByHTTPUser
 }
 
-func (c *TCPMuxProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.UnmarshalFromMsg(m)
+func (c *TCPMuxForwardConfig) UnmarshalFromMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.UnmarshalFromMsg(m)
 
 	c.CustomDomains = m.CustomDomains
 	c.SubDomain = m.SubDomain
@@ -375,70 +378,70 @@ func (c *TCPMuxProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
 	c.RouteByHTTPUser = m.RouteByHTTPUser
 }
 
-var _ ProxyConfigurer = &STCPProxyConfig{}
+var _ ForwardConfigurer = &STCPForwardConfig{}
 
-type STCPProxyConfig struct {
-	ProxyBaseConfig
+type STCPForwardConfig struct {
+	ForwardBaseConfig
 
 	Secretkey  string   `json:"secretKey,omitempty"`
 	AllowUsers []string `json:"allowUsers,omitempty"`
 }
 
-func (c *STCPProxyConfig) MarshalToMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.MarshalToMsg(m)
+func (c *STCPForwardConfig) MarshalToMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.MarshalToMsg(m)
 
 	m.Sk = c.Secretkey
 	m.AllowUsers = c.AllowUsers
 }
 
-func (c *STCPProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.UnmarshalFromMsg(m)
+func (c *STCPForwardConfig) UnmarshalFromMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.UnmarshalFromMsg(m)
 
 	c.Secretkey = m.Sk
 	c.AllowUsers = m.AllowUsers
 }
 
-var _ ProxyConfigurer = &XTCPProxyConfig{}
+var _ ForwardConfigurer = &XTCPForwardConfig{}
 
-type XTCPProxyConfig struct {
-	ProxyBaseConfig
+type XTCPForwardConfig struct {
+	ForwardBaseConfig
 
 	Secretkey  string   `json:"secretKey,omitempty"`
 	AllowUsers []string `json:"allowUsers,omitempty"`
 }
 
-func (c *XTCPProxyConfig) MarshalToMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.MarshalToMsg(m)
+func (c *XTCPForwardConfig) MarshalToMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.MarshalToMsg(m)
 
 	m.Sk = c.Secretkey
 	m.AllowUsers = c.AllowUsers
 }
 
-func (c *XTCPProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.UnmarshalFromMsg(m)
+func (c *XTCPForwardConfig) UnmarshalFromMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.UnmarshalFromMsg(m)
 
 	c.Secretkey = m.Sk
 	c.AllowUsers = m.AllowUsers
 }
 
-var _ ProxyConfigurer = &SUDPProxyConfig{}
+var _ ForwardConfigurer = &SUDPForwardConfig{}
 
-type SUDPProxyConfig struct {
-	ProxyBaseConfig
+type SUDPForwardConfig struct {
+	ForwardBaseConfig
 
 	Secretkey  string   `json:"secretKey,omitempty"`
 	AllowUsers []string `json:"allowUsers,omitempty"`
 }
 
-func (c *SUDPProxyConfig) MarshalToMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.MarshalToMsg(m)
+func (c *SUDPForwardConfig) MarshalToMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.MarshalToMsg(m)
 
 	m.Sk = c.Secretkey
 	m.AllowUsers = c.AllowUsers
 }
 
-func (c *SUDPProxyConfig) UnmarshalFromMsg(m *msg.NewProxy) {
-	c.ProxyBaseConfig.UnmarshalFromMsg(m)
+func (c *SUDPForwardConfig) UnmarshalFromMsg(m *msg.NewForward) {
+	c.ForwardBaseConfig.UnmarshalFromMsg(m)
 
 	c.Secretkey = m.Sk
 	c.AllowUsers = m.AllowUsers

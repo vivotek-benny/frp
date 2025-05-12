@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/fatedier/frp/assets"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
+	"monitoragent/assets"
+	v1 "monitoragent/pkg/config/v1"
+	netpkg "monitoragent/pkg/util/net"
 )
 
 var (

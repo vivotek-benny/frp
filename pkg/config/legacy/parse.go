@@ -1,4 +1,4 @@
-// Copyright 2021 The frp Authors
+// Copyright 2021 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 
 func ParseClientConfig(filePath string) (
 	cfg ClientCommonConf,
-	proxyCfgs map[string]ProxyConf,
+	forwardCfgs map[string]ForwardConf,
 	visitorCfgs map[string]VisitorConf,
 	err error,
 ) {
@@ -45,7 +45,7 @@ func ParseClientConfig(filePath string) (
 		return
 	}
 
-	// Aggregate proxy configs from include files.
+	// Aggregate forward configs from include files.
 	var buf []byte
 	buf, err = getIncludeContents(cfg.IncludeConfigFiles)
 	if err != nil {
@@ -55,8 +55,8 @@ func ParseClientConfig(filePath string) (
 	configBuffer.WriteString("\n")
 	configBuffer.Write(buf)
 
-	// Parse all proxy and visitor configs.
-	proxyCfgs, visitorCfgs, err = LoadAllProxyConfsFromIni(cfg.User, configBuffer.Bytes(), cfg.Start)
+	// Parse all forward and visitor configs.
+	forwardCfgs, visitorCfgs, err = LoadAllForwardConfsFromIni(cfg.User, configBuffer.Bytes(), cfg.Start)
 	if err != nil {
 		return
 	}

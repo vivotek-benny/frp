@@ -11,9 +11,9 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	"github.com/fatedier/frp/test/e2e/mock/server"
-	"github.com/fatedier/frp/test/e2e/pkg/port"
-	"github.com/fatedier/frp/test/e2e/pkg/process"
+	"monitoragent/test/e2e/mock/server"
+	"monitoragent/test/e2e/pkg/port"
+	"monitoragent/test/e2e/pkg/process"
 )
 
 type Options struct {
@@ -89,7 +89,7 @@ func (f *Framework) BeforeEach() {
 
 	f.cleanupHandle = AddCleanupAction(f.AfterEach)
 
-	dir, err := os.MkdirTemp(os.TempDir(), "frp-e2e-test-*")
+	dir, err := os.MkdirTemp(os.TempDir(), "monitoragent-e2e-test-*")
 	ExpectNoError(err)
 	f.TempDirectory = dir
 

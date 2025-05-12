@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package validation
 import (
 	"errors"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	splugin "github.com/fatedier/frp/pkg/plugin/server"
+	v1 "monitoragent/pkg/config/v1"
+	splugin "monitoragent/pkg/plugin/server"
 )
 
 var (
@@ -50,8 +50,8 @@ var (
 
 	SupportedHTTPPluginOps = []string{
 		splugin.OpLogin,
-		splugin.OpNewProxy,
-		splugin.OpCloseProxy,
+		splugin.OpNewForward,
+		splugin.OpCloseForward,
 		splugin.OpPing,
 		splugin.OpNewWorkConn,
 		splugin.OpNewUserConn,

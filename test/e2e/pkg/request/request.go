@@ -14,8 +14,8 @@ import (
 
 	libdial "github.com/fatedier/golib/net/dial"
 
-	httppkg "github.com/fatedier/frp/pkg/util/http"
-	"github.com/fatedier/frp/test/e2e/pkg/rpc"
+	httppkg "monitoragent/pkg/util/http"
+	"monitoragent/test/e2e/pkg/rpc"
 )
 
 type Request struct {

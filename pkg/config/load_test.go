@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
+	v1 "monitoragent/pkg/config/v1"
 )
 
 const tomlServerContent = `

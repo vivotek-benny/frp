@@ -22,8 +22,8 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/oauth2/clientcredentials"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
 )
 
 type OidcAuthProvider struct {
@@ -64,7 +64,7 @@ func (auth *OidcAuthProvider) generateAccessToken() (accessToken string, err err
 	return tokenObj.AccessToken, nil
 }
 
-func (auth *OidcAuthProvider) SetLogin(loginMsg *msg.Login) (err error) {
+func (auth *OidcAuthProvider) SetLogin(loginMsg *msg.Handshake) (err error) {
 	loginMsg.PrivilegeKey, err = auth.generateAccessToken()
 	return err
 }
@@ -111,7 +111,7 @@ func NewOidcAuthVerifier(additionalAuthScopes []v1.AuthScope, cfg v1.AuthOIDCSer
 	}
 }
 
-func (auth *OidcAuthConsumer) VerifyLogin(loginMsg *msg.Login) (err error) {
+func (auth *OidcAuthConsumer) VerifyLogin(loginMsg *msg.Handshake) (err error) {
 	token, err := auth.verifier.Verify(context.Background(), loginMsg.PrivilegeKey)
 	if err != nil {
 		return fmt.Errorf("invalid OIDC token in login: %v", err)

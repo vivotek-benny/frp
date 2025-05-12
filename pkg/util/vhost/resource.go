@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import (
 	"net/http"
 	"os"
 
-	logpkg "github.com/fatedier/frp/pkg/util/log"
-	"github.com/fatedier/frp/pkg/util/version"
+	logpkg "monitoragent/pkg/util/log"
+	"monitoragent/pkg/util/version"
 )
 
 var NotFoundPagePath = ""
@@ -43,8 +43,8 @@ const (
 <h1>The page you requested was not found.</h1>
 <p>Sorry, the page you are looking for is currently unavailable.<br/>
 Please try again later.</p>
-<p>The server is powered by <a href="https://github.com/fatedier/frp">frp</a>.</p>
-<p><em>Faithfully yours, frp.</em></p>
+<p>The server is powered by <a href="https://monitoragent">monitoragent</a>.</p>
+<p><em>Faithfully yours, monitoragent.</em></p>
 </body>
 </html>
 `
@@ -69,7 +69,7 @@ func getNotFoundPageContent() []byte {
 
 func NotFoundResponse() *http.Response {
 	header := make(http.Header)
-	header.Set("server", "frp/"+version.Full())
+	header.Set("server", "monitoragent/"+version.Full())
 	header.Set("Content-Type", "text/html")
 
 	content := getNotFoundPageContent()

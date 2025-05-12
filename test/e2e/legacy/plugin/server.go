@@ -6,11 +6,11 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	plugin "github.com/fatedier/frp/pkg/plugin/server"
-	"github.com/fatedier/frp/pkg/transport"
-	"github.com/fatedier/frp/test/e2e/framework"
-	"github.com/fatedier/frp/test/e2e/framework/consts"
-	pluginpkg "github.com/fatedier/frp/test/e2e/pkg/plugin"
+	plugin "monitoragent/pkg/plugin/server"
+	"monitoragent/pkg/transport"
+	"monitoragent/test/e2e/framework"
+	"monitoragent/test/e2e/framework/consts"
+	pluginpkg "monitoragent/test/e2e/pkg/plugin"
 )
 
 var _ = ginkgo.Describe("[Feature: Server-Plugins]", func() {
@@ -83,7 +83,7 @@ var _ = ginkgo.Describe("[Feature: Server-Plugins]", func() {
 	ginkgo.Describe("NewProxy", func() {
 		newFunc := func() *plugin.Request {
 			var r plugin.Request
-			r.Content = &plugin.NewProxyContent{}
+			r.Content = &plugin.NewForwardContent{}
 			return &r
 		}
 
@@ -91,8 +91,8 @@ var _ = ginkgo.Describe("[Feature: Server-Plugins]", func() {
 			localPort := f.AllocPort()
 			handler := func(req *plugin.Request) *plugin.Response {
 				var ret plugin.Response
-				content := req.Content.(*plugin.NewProxyContent)
-				if content.ProxyName == "tcp" {
+				content := req.Content.(*plugin.NewForwardContent)
+				if content.ForwardName == "tcp" {
 					ret.Unchange = true
 				} else {
 					ret.Reject = true
@@ -129,7 +129,7 @@ var _ = ginkgo.Describe("[Feature: Server-Plugins]", func() {
 			remotePort := f.AllocPort()
 			handler := func(req *plugin.Request) *plugin.Response {
 				var ret plugin.Response
-				content := req.Content.(*plugin.NewProxyContent)
+				content := req.Content.(*plugin.NewForwardContent)
 				content.RemotePort = remotePort
 				ret.Content = content
 				return &ret
@@ -162,7 +162,7 @@ var _ = ginkgo.Describe("[Feature: Server-Plugins]", func() {
 	ginkgo.Describe("CloseProxy", func() {
 		newFunc := func() *plugin.Request {
 			var r plugin.Request
-			r.Content = &plugin.CloseProxyContent{}
+			r.Content = &plugin.CloseForwardContent{}
 			return &r
 		}
 
@@ -171,8 +171,8 @@ var _ = ginkgo.Describe("[Feature: Server-Plugins]", func() {
 			var recordProxyName string
 			handler := func(req *plugin.Request) *plugin.Response {
 				var ret plugin.Response
-				content := req.Content.(*plugin.CloseProxyContent)
-				recordProxyName = content.ProxyName
+				content := req.Content.(*plugin.CloseForwardContent)
+				recordProxyName = content.ForwardName
 				return &ret
 			}
 			pluginServer := pluginpkg.NewHTTPPluginServer(localPort, newFunc, handler, nil)

@@ -17,12 +17,12 @@ package auth
 import (
 	"fmt"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
 )
 
 type Setter interface {
-	SetLogin(*msg.Login) error
+	SetLogin(*msg.Handshake) error
 	SetPing(*msg.Ping) error
 	SetNewWorkConn(*msg.NewWorkConn) error
 }
@@ -40,7 +40,7 @@ func NewAuthSetter(cfg v1.AuthClientConfig) (authProvider Setter) {
 }
 
 type Verifier interface {
-	VerifyLogin(*msg.Login) error
+	VerifyLogin(*msg.Handshake) error
 	VerifyPing(*msg.Ping) error
 	VerifyNewWorkConn(*msg.NewWorkConn) error
 }

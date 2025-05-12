@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@ package legacy
 
 type BaseConfig struct {
 	// AuthenticationMethod specifies what authentication method to use to
-	// authenticate frpc with frps. If "token" is specified - token will be
+	// authenticate monitoragentc with monitoragents. If "token" is specified - token will be
 	// read into login message. If "oidc" is specified - OIDC (Open ID Connect)
 	// token will be issued using OIDC settings. By default, this value is "token".
 	AuthenticationMethod string `ini:"authentication_method" json:"authentication_method"`
 	// AuthenticateHeartBeats specifies whether to include authentication token in
-	// heartbeats sent to frps. By default, this value is false.
+	// heartbeats sent to monitoragents. By default, this value is false.
 	AuthenticateHeartBeats bool `ini:"authenticate_heartbeats" json:"authenticate_heartbeats"`
 	// AuthenticateNewWorkConns specifies whether to include authentication token in
-	// new work connections sent to frps. By default, this value is false.
+	// new work connections sent to monitoragents. By default, this value is false.
 	AuthenticateNewWorkConns bool `ini:"authenticate_new_work_conns" json:"authenticate_new_work_conns"`
 }
 

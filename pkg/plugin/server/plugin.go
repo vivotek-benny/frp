@@ -1,4 +1,4 @@
-// Copyright 2019 fatedier, fatedier@gmail.com
+// Copyright 2019 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@ import (
 const (
 	APIVersion = "0.1.0"
 
-	OpLogin       = "Login"
-	OpNewProxy    = "NewProxy"
-	OpCloseProxy  = "CloseProxy"
-	OpPing        = "Ping"
-	OpNewWorkConn = "NewWorkConn"
-	OpNewUserConn = "NewUserConn"
+	OpLogin        = "Login"
+	OpNewForward   = "NewForward"
+	OpCloseForward = "CloseForward"
+	OpPing         = "Ping"
+	OpNewWorkConn  = "NewWorkConn"
+	OpNewUserConn  = "NewUserConn"
 )
 
 type Plugin interface {

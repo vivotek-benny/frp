@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import (
 
 	"gopkg.in/ini.v1"
 
-	legacyauth "github.com/fatedier/frp/pkg/auth/legacy"
+	legacyauth "monitoragent/pkg/auth/legacy"
 )
 
 type HTTPPluginOptions struct {
@@ -70,7 +70,7 @@ type ServerCommonConf struct {
 	// requests on one single port. If it's not - it will listen on this value for
 	// HTTP CONNECT requests. By default, this value is 0.
 	TCPMuxHTTPConnectPort int `ini:"tcpmux_httpconnect_port" json:"tcpmux_httpconnect_port"`
-	// If TCPMuxPassthrough is true, frps won't do any update on traffic.
+	// If TCPMuxPassthrough is true, monitoragents won't do any update on traffic.
 	TCPMuxPassthrough bool `ini:"tcpmux_passthrough" json:"tcpmux_passthrough"`
 	// VhostHTTPTimeout specifies the response header timeout for the Vhost
 	// HTTP server, in seconds. By default, this value is 60.
@@ -126,13 +126,13 @@ type ServerCommonConf struct {
 	// true. By default, this value is false.
 	DisableLogColor bool `ini:"disable_log_color" json:"disable_log_color"`
 	// DetailedErrorsToClient defines whether to send the specific error (with
-	// debug info) to frpc. By default, this value is true.
+	// debug info) to monitoragentc. By default, this value is true.
 	DetailedErrorsToClient bool `ini:"detailed_errors_to_client" json:"detailed_errors_to_client"`
 
 	// SubDomainHost specifies the domain that will be attached to sub-domains
 	// requested by the client when using Vhost proxying. For example, if this
-	// value is set to "frps.com" and the client requested the subdomain
-	// "test", the resulting URL would be "test.frps.com". By default, this
+	// value is set to "monitoragents.com" and the client requested the subdomain
+	// "test", the resulting URL would be "test.monitoragents.com". By default, this
 	// value is "".
 	SubDomainHost string `ini:"subdomain_host" json:"subdomain_host"`
 	// TCPMux toggles TCP stream multiplexing. This allows multiple requests
@@ -142,7 +142,7 @@ type ServerCommonConf struct {
 	// TCPMuxKeepaliveInterval specifies the keep alive interval for TCP stream multiplier.
 	// If TCPMux is true, heartbeat of application layer is unnecessary because it can only rely on heartbeat in TCPMux.
 	TCPMuxKeepaliveInterval int64 `ini:"tcp_mux_keepalive_interval" json:"tcp_mux_keepalive_interval"`
-	// TCPKeepAlive specifies the interval between keep-alive probes for an active network connection between frpc and frps.
+	// TCPKeepAlive specifies the interval between keep-alive probes for an active network connection between monitoragentc and monitoragents.
 	// If negative, keep-alive probes are disabled.
 	TCPKeepAlive int64 `ini:"tcp_keepalive" json:"tcp_keepalive"`
 	// Custom404Page specifies a path to a custom 404 page to display. If this

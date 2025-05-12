@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@ import (
 
 	libio "github.com/fatedier/golib/io"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/util/util"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/util/util"
+	"monitoragent/pkg/util/xlog"
 )
 
 type STCPVisitor struct {
@@ -89,7 +89,7 @@ func (sv *STCPVisitor) handleConn(userConn net.Conn) {
 	now := time.Now().Unix()
 	newVisitorConnMsg := &msg.NewVisitorConn{
 		RunID:          sv.helper.RunID(),
-		ProxyName:      sv.cfg.ServerName,
+		ForwardName:    sv.cfg.ServerName,
 		SignKey:        util.GetAuthKey(sv.cfg.SecretKey, now),
 		Timestamp:      now,
 		UseEncryption:  sv.cfg.Transport.UseEncryption,

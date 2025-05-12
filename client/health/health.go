@@ -1,4 +1,4 @@
-// Copyright 2018 fatedier, fatedier@gmail.com
+// Copyright 2018 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/util/xlog"
 )
 
 var ErrHealthCheckType = errors.New("error health check type")

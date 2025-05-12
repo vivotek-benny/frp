@@ -1,4 +1,4 @@
-// Copyright 2018 fatedier, fatedier@gmail.com
+// Copyright 2018 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !frps
+//go:build !monitoragents
 
 package plugin
 
@@ -24,8 +24,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
+	v1 "monitoragent/pkg/config/v1"
+	netpkg "monitoragent/pkg/util/net"
 )
 
 func init() {
@@ -42,7 +42,7 @@ type StaticFilePlugin struct {
 func NewStaticFilePlugin(options v1.ClientPluginOptions) (Plugin, error) {
 	opts := options.(*v1.StaticFilePluginOptions)
 
-	listener := NewProxyListener()
+	listener := NewForwardListener()
 
 	sp := &StaticFilePlugin{
 		opts: opts,

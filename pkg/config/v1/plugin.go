@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ func (c *TypedClientPluginOptions) UnmarshalJSON(b []byte) error {
 
 const (
 	PluginHTTP2HTTPS       = "http2https"
-	PluginHTTPProxy        = "http_proxy"
+	PluginHTTPForward      = "http_proxy"
 	PluginHTTPS2HTTP       = "https2http"
 	PluginHTTPS2HTTPS      = "https2https"
 	PluginSocks5           = "socks5"
@@ -75,7 +75,7 @@ const (
 
 var clientPluginOptionsTypeMap = map[string]reflect.Type{
 	PluginHTTP2HTTPS:       reflect.TypeOf(HTTP2HTTPSPluginOptions{}),
-	PluginHTTPProxy:        reflect.TypeOf(HTTPProxyPluginOptions{}),
+	PluginHTTPForward:      reflect.TypeOf(HTTPForwardPluginOptions{}),
 	PluginHTTPS2HTTP:       reflect.TypeOf(HTTPS2HTTPPluginOptions{}),
 	PluginHTTPS2HTTPS:      reflect.TypeOf(HTTPS2HTTPSPluginOptions{}),
 	PluginSocks5:           reflect.TypeOf(Socks5PluginOptions{}),
@@ -90,7 +90,7 @@ type HTTP2HTTPSPluginOptions struct {
 	RequestHeaders    HeaderOperations `json:"requestHeaders,omitempty"`
 }
 
-type HTTPProxyPluginOptions struct {
+type HTTPForwardPluginOptions struct {
 	Type         string `json:"type,omitempty"`
 	HTTPUser     string `json:"httpUser,omitempty"`
 	HTTPPassword string `json:"httpPassword,omitempty"`

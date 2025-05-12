@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,33 +22,15 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/fatedier/frp/client/proxy"
-	"github.com/fatedier/frp/client/visitor"
-	"github.com/fatedier/frp/pkg/auth"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/transport"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
-	"github.com/fatedier/frp/pkg/util/wait"
-	"github.com/fatedier/frp/pkg/util/xlog"
+	"monitoragent/client/forward"
+	"monitoragent/client/visitor"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
+	"monitoragent/pkg/transport"
+	netpkg "monitoragent/pkg/util/net"
+	"monitoragent/pkg/util/wait"
+	"monitoragent/pkg/util/xlog"
 )
-
-type SessionContext struct {
-	// The client common configuration.
-	Common *v1.ClientCommonConfig
-
-	// Unique ID obtained from frps.
-	// It should be attached to the login message when reconnecting.
-	RunID string
-	// Underlying control connection. Once conn is closed, the msgDispatcher and the entire Control will exit.
-	Conn net.Conn
-	// Indicates whether the connection is encrypted.
-	ConnEncrypted bool
-	// Sets authentication based on selected method
-	AuthSetter auth.Setter
-	// Connector is used to create new connections, which could be real TCP connections or virtual streams.
-	Connector Connector
-}
 
 type Control struct {
 	// service context
@@ -59,7 +41,7 @@ type Control struct {
 	sessionCtx *SessionContext
 
 	// manage all proxies
-	pm *proxy.Manager
+	fm *forward.Manager
 
 	// manage all visitors
 	vm *visitor.Manager
@@ -90,7 +72,10 @@ func NewControl(ctx context.Context, sessionCtx *SessionContext) (*Control, erro
 	ctl.lastPong.Store(time.Now())
 
 	if sessionCtx.ConnEncrypted {
-		cryptoRW, err := netpkg.NewCryptoReadWriter(sessionCtx.Conn, []byte(sessionCtx.Common.Auth.Token))
+		cryptoRW, err := netpkg.NewCryptoReadWriter(
+			sessionCtx.Conn,
+			[]byte(sessionCtx.Common.Auth.Token),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -101,23 +86,25 @@ func NewControl(ctx context.Context, sessionCtx *SessionContext) (*Control, erro
 	ctl.registerMsgHandlers()
 	ctl.msgTransporter = transport.NewMessageTransporter(ctl.msgDispatcher.SendChannel())
 
-	ctl.pm = proxy.NewManager(ctl.ctx, sessionCtx.Common, ctl.msgTransporter)
-	ctl.vm = visitor.NewManager(ctl.ctx, sessionCtx.RunID, sessionCtx.Common, ctl.connectServer, ctl.msgTransporter)
+	ctl.fm = forward.NewManager(ctl.ctx, sessionCtx.Common, ctl.msgTransporter)
+	ctl.vm = visitor.NewManager(ctl.ctx, sessionCtx.SessionID, sessionCtx.Common, ctl.connectServer, ctl.msgTransporter)
 	return ctl, nil
 }
 
-func (ctl *Control) Run(proxyCfgs []v1.ProxyConfigurer, visitorCfgs []v1.VisitorConfigurer) {
+func (ctl *Control) Run(forwardCfgs []v1.ForwardConfigurer, visitorCfgs []v1.VisitorConfigurer) {
 	go ctl.worker()
 
 	// start all proxies
-	ctl.pm.UpdateAll(proxyCfgs)
+	ctl.fm.UpdateAll(forwardCfgs)
 
 	// start all visitors
 	ctl.vm.UpdateAll(visitorCfgs)
 }
 
-func (ctl *Control) SetInWorkConnCallback(cb func(*v1.ProxyBaseConfig, net.Conn, *msg.StartWorkConn) bool) {
-	ctl.pm.SetInWorkConnCallback(cb)
+func (ctl *Control) SetInWorkConnCallback(
+	cb func(*v1.ForwardBaseConfig, net.Conn, *msg.StartWorkConn) bool,
+) {
+	ctl.fm.SetInWorkConnCallback(cb)
 }
 
 func (ctl *Control) handleReqWorkConn(_ msg.Message) {
@@ -129,7 +116,7 @@ func (ctl *Control) handleReqWorkConn(_ msg.Message) {
 	}
 
 	m := &msg.NewWorkConn{
-		RunID: ctl.sessionCtx.RunID,
+		RunID: ctl.sessionCtx.SessionID,
 	}
 	if err = ctl.sessionCtx.AuthSetter.SetNewWorkConn(m); err != nil {
 		xl.Warn("error during NewWorkConn authentication: %v", err)
@@ -153,20 +140,20 @@ func (ctl *Control) handleReqWorkConn(_ msg.Message) {
 		return
 	}
 
-	// dispatch this work connection to related proxy
-	ctl.pm.HandleWorkConn(startMsg.ProxyName, workConn, &startMsg)
+	// dispatch this work connection to related forward
+	ctl.fm.HandleWorkConn(startMsg.ForwardName, workConn, &startMsg)
 }
 
-func (ctl *Control) handleNewProxyResp(m msg.Message) {
+func (ctl *Control) handleNewForwardResp(m msg.Message) {
 	xl := ctl.xl
-	inMsg := m.(*msg.NewProxyResp)
-	// Server will return NewProxyResp message to each NewProxy message.
-	// Start a new proxy handler if no error got
-	err := ctl.pm.StartProxy(inMsg.ProxyName, inMsg.RemoteAddr, inMsg.Error)
+	inMsg := m.(*msg.NewForwardResp)
+	// Server will return NewForwardResp message to each NewForward message.
+	// Start a new forward handler if no error got
+	err := ctl.fm.StartForward(inMsg.ForwardName, inMsg.RemoteAddr, inMsg.Error)
 	if err != nil {
-		xl.Warn("[%s] start error: %v", inMsg.ProxyName, err)
+		xl.Warn("[%s] start error: %v", inMsg.ForwardName, err)
 	} else {
-		xl.Info("[%s] start proxy success", inMsg.ProxyName)
+		xl.Info("[%s] start forward success", inMsg.ForwardName)
 	}
 }
 
@@ -174,10 +161,10 @@ func (ctl *Control) handleNatHoleResp(m msg.Message) {
 	xl := ctl.xl
 	inMsg := m.(*msg.NatHoleResp)
 
-	// Dispatch the NatHoleResp message to the related proxy.
+	// Dispatch the NatHoleResp message to the related forward.
 	ok := ctl.msgTransporter.DispatchWithType(inMsg, msg.TypeNameNatHoleResp, inMsg.TransactionID)
 	if !ok {
-		xl.Trace("dispatch NatHoleResp message to related proxy error")
+		xl.Trace("dispatch NatHoleResp message to related forward error")
 	}
 }
 
@@ -205,7 +192,7 @@ func (ctl *Control) Close() error {
 }
 
 func (ctl *Control) GracefulClose(d time.Duration) error {
-	ctl.pm.Close()
+	ctl.fm.Close()
 	ctl.vm.Close()
 
 	time.Sleep(d)
@@ -219,14 +206,14 @@ func (ctl *Control) Done() <-chan struct{} {
 	return ctl.doneCh
 }
 
-// connectServer return a new connection to frps
+// connectServer return a new connection to monitoragents
 func (ctl *Control) connectServer() (net.Conn, error) {
 	return ctl.sessionCtx.Connector.Connect()
 }
 
 func (ctl *Control) registerMsgHandlers() {
 	ctl.msgDispatcher.RegisterHandler(&msg.ReqWorkConn{}, msg.AsyncHandler(ctl.handleReqWorkConn))
-	ctl.msgDispatcher.RegisterHandler(&msg.NewProxyResp{}, ctl.handleNewProxyResp)
+	ctl.msgDispatcher.RegisterHandler(&msg.NewForwardResp{}, ctl.handleNewForwardResp)
 	ctl.msgDispatcher.RegisterHandler(&msg.NatHoleResp{}, ctl.handleNatHoleResp)
 	ctl.msgDispatcher.RegisterHandler(&msg.Pong{}, ctl.handlePong)
 }
@@ -252,22 +239,31 @@ func (ctl *Control) heartbeatWorker() {
 
 		go wait.BackoffUntil(sendHeartBeat,
 			wait.NewFastBackoffManager(wait.FastBackoffOptions{
-				Duration:           time.Duration(ctl.sessionCtx.Common.Transport.HeartbeatInterval) * time.Second,
+				Duration: time.Duration(
+					ctl.sessionCtx.Common.Transport.HeartbeatInterval,
+				) * time.Second,
 				InitDurationIfFail: time.Second,
 				Factor:             2.0,
 				Jitter:             0.1,
-				MaxDuration:        time.Duration(ctl.sessionCtx.Common.Transport.HeartbeatInterval) * time.Second,
+				MaxDuration: time.Duration(
+					ctl.sessionCtx.Common.Transport.HeartbeatInterval,
+				) * time.Second,
 			}),
 			true, ctl.doneCh,
 		)
 	}
 
 	// Check heartbeat timeout only if TCPMux is not enabled and users don't disable heartbeat feature.
-	if ctl.sessionCtx.Common.Transport.HeartbeatInterval > 0 && ctl.sessionCtx.Common.Transport.HeartbeatTimeout > 0 &&
+	if ctl.sessionCtx.Common.Transport.HeartbeatInterval > 0 &&
+		ctl.sessionCtx.Common.Transport.HeartbeatTimeout > 0 &&
 		!lo.FromPtr(ctl.sessionCtx.Common.Transport.TCPMux) {
 
 		go wait.Until(func() {
-			if time.Since(ctl.lastPong.Load().(time.Time)) > time.Duration(ctl.sessionCtx.Common.Transport.HeartbeatTimeout)*time.Second {
+			if time.Since(
+				ctl.lastPong.Load().(time.Time),
+			) > time.Duration(
+				ctl.sessionCtx.Common.Transport.HeartbeatTimeout,
+			)*time.Second {
 				xl.Warn("heartbeat timeout")
 				ctl.closeSession()
 				return
@@ -283,13 +279,16 @@ func (ctl *Control) worker() {
 	<-ctl.msgDispatcher.Done()
 	ctl.closeSession()
 
-	ctl.pm.Close()
+	ctl.fm.Close()
 	ctl.vm.Close()
 	close(ctl.doneCh)
 }
 
-func (ctl *Control) UpdateAllConfigurer(proxyCfgs []v1.ProxyConfigurer, visitorCfgs []v1.VisitorConfigurer) error {
+func (ctl *Control) UpdateAllConfigurer(
+	forwardCfgs []v1.ForwardConfigurer,
+	visitorCfgs []v1.VisitorConfigurer,
+) error {
 	ctl.vm.UpdateAll(visitorCfgs)
-	ctl.pm.UpdateAll(proxyCfgs)
+	ctl.fm.UpdateAll(forwardCfgs)
 	return nil
 }

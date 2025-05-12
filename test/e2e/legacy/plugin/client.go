@@ -7,13 +7,13 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	"github.com/fatedier/frp/pkg/transport"
-	"github.com/fatedier/frp/test/e2e/framework"
-	"github.com/fatedier/frp/test/e2e/framework/consts"
-	"github.com/fatedier/frp/test/e2e/mock/server/httpserver"
-	"github.com/fatedier/frp/test/e2e/pkg/cert"
-	"github.com/fatedier/frp/test/e2e/pkg/port"
-	"github.com/fatedier/frp/test/e2e/pkg/request"
+	"monitoragent/pkg/transport"
+	"monitoragent/test/e2e/framework"
+	"monitoragent/test/e2e/framework/consts"
+	"monitoragent/test/e2e/mock/server/httpserver"
+	"monitoragent/test/e2e/pkg/cert"
+	"monitoragent/test/e2e/pkg/port"
+	"monitoragent/test/e2e/pkg/request"
 )
 
 var _ = ginkgo.Describe("[Feature: Client-Plugins]", func() {
@@ -67,7 +67,7 @@ var _ = ginkgo.Describe("[Feature: Client-Plugins]", func() {
 			for _, test := range tests {
 				clientConf += getProxyConf(test.proxyName, test.portName, test.extraConfig) + "\n"
 			}
-			// run frps and frpc
+			// run monitoragents and monitoragentc
 			f.RunProcesses([]string{serverConf}, []string{clientConf})
 
 			for _, test := range tests {

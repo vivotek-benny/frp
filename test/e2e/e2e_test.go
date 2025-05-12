@@ -8,15 +8,15 @@ import (
 
 	_ "github.com/onsi/ginkgo/v2"
 
-	"github.com/fatedier/frp/pkg/util/log"
+	"monitoragent/pkg/util/log"
 	// test source
-	"github.com/fatedier/frp/test/e2e/framework"
-	_ "github.com/fatedier/frp/test/e2e/legacy/basic"
-	_ "github.com/fatedier/frp/test/e2e/legacy/features"
-	_ "github.com/fatedier/frp/test/e2e/legacy/plugin"
-	_ "github.com/fatedier/frp/test/e2e/v1/basic"
-	_ "github.com/fatedier/frp/test/e2e/v1/features"
-	_ "github.com/fatedier/frp/test/e2e/v1/plugin"
+	"monitoragent/test/e2e/framework"
+	_ "monitoragent/test/e2e/legacy/basic"
+	_ "monitoragent/test/e2e/legacy/features"
+	_ "monitoragent/test/e2e/legacy/plugin"
+	_ "monitoragent/test/e2e/v1/basic"
+	_ "monitoragent/test/e2e/v1/features"
+	_ "monitoragent/test/e2e/v1/plugin"
 )
 
 // handleFlags sets up all flags and parses the command line.

@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !frps
+//go:build !monitoragents
 
 package plugin
 
@@ -22,7 +22,7 @@ import (
 
 	libio "github.com/fatedier/golib/io"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
+	v1 "monitoragent/pkg/config/v1"
 )
 
 func init() {
@@ -53,8 +53,8 @@ func (uds *UnixDomainSocketPlugin) Handle(conn io.ReadWriteCloser, _ net.Conn, e
 	if err != nil {
 		return
 	}
-	if extra.ProxyProtocolHeader != nil {
-		if _, err := extra.ProxyProtocolHeader.WriteTo(localConn); err != nil {
+	if extra.ForwardProtocolHeader != nil {
+		if _, err := extra.ForwardProtocolHeader.WriteTo(localConn); err != nil {
 			return
 		}
 	}

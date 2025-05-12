@@ -1,4 +1,4 @@
-// Copyright 2019 fatedier, fatedier@gmail.com
+// Copyright 2019 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 package plugin
 
 import (
-	"github.com/fatedier/frp/pkg/msg"
+	"monitoragent/pkg/msg"
 )
 
 type Request struct {
@@ -32,7 +32,7 @@ type Response struct {
 }
 
 type LoginContent struct {
-	msg.Login
+	msg.Handshake
 
 	ClientAddress string `json:"client_address,omitempty"`
 }
@@ -43,14 +43,14 @@ type UserInfo struct {
 	RunID string            `json:"run_id"`
 }
 
-type NewProxyContent struct {
+type NewForwardContent struct {
 	User UserInfo `json:"user"`
-	msg.NewProxy
+	msg.NewForward
 }
 
-type CloseProxyContent struct {
+type CloseForwardContent struct {
 	User UserInfo `json:"user"`
-	msg.CloseProxy
+	msg.CloseForward
 }
 
 type PingContent struct {

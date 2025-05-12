@@ -1,4 +1,4 @@
-// Copyright 2017 fatedier, fatedier@gmail.com
+// Copyright 2017 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 	"github.com/fatedier/golib/errors"
 	pp "github.com/pires/go-proxyproto"
 
-	v1 "github.com/fatedier/frp/pkg/config/v1"
+	v1 "monitoragent/pkg/config/v1"
 )
 
 // Creators is used for create plugins to handle connections.
@@ -49,7 +49,7 @@ func Create(name string, options v1.ClientPluginOptions) (p Plugin, err error) {
 }
 
 type ExtraInfo struct {
-	ProxyProtocolHeader *pp.Header
+	ForwardProtocolHeader *pp.Header
 }
 
 type Plugin interface {
@@ -65,7 +65,7 @@ type Listener struct {
 	mu     sync.Mutex
 }
 
-func NewProxyListener() *Listener {
+func NewForwardListener() *Listener {
 	return &Listener{
 		conns: make(chan net.Conn, 64),
 	}

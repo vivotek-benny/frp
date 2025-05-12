@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,16 +18,17 @@ import (
 	"context"
 	"net"
 
-	"github.com/fatedier/frp/client"
-	v1 "github.com/fatedier/frp/pkg/config/v1"
-	"github.com/fatedier/frp/pkg/msg"
-	netpkg "github.com/fatedier/frp/pkg/util/net"
+	"monitoragent/client"
+	"monitoragent/client/connector"
+	v1 "monitoragent/pkg/config/v1"
+	"monitoragent/pkg/msg"
+	netpkg "monitoragent/pkg/util/net"
 )
 
 type ClientOptions struct {
 	Common           *v1.ClientCommonConfig
 	Spec             *msg.ClientSpec
-	HandleWorkConnCb func(*v1.ProxyBaseConfig, net.Conn, *msg.StartWorkConn) bool
+	HandleWorkConnCb func(*v1.ForwardBaseConfig, net.Conn, *msg.StartWorkConn) bool
 }
 
 type Client struct {
@@ -45,7 +46,7 @@ func NewClient(options ClientOptions) (*Client, error) {
 	serviceOptions := client.ServiceOptions{
 		Common:     options.Common,
 		ClientSpec: options.Spec,
-		ConnectorCreator: func(context.Context, *v1.ClientCommonConfig) client.Connector {
+		ConnectorCreator: func(context.Context, *v1.ClientCommonConfig) connector.Connector {
 			return &pipeConnector{
 				peerListener: ln,
 			}
@@ -66,8 +67,8 @@ func (c *Client) PeerListener() net.Listener {
 	return c.l
 }
 
-func (c *Client) UpdateProxyConfigurer(proxyCfgs []v1.ProxyConfigurer) {
-	_ = c.svr.UpdateAllConfigurer(proxyCfgs, nil)
+func (c *Client) UpdateForwardConfigurer(forwardCfgs []v1.ForwardConfigurer) {
+	_ = c.svr.UpdateAllConfigurer(forwardCfgs, nil)
 }
 
 func (c *Client) Run(ctx context.Context) error {

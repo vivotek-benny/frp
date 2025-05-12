@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import (
 	"github.com/fatedier/golib/crypto"
 	"github.com/pion/stun"
 
-	"github.com/fatedier/frp/pkg/msg"
+	"monitoragent/pkg/msg"
 )
 
 func EncodeMessage(m msg.Message, key []byte) ([]byte, error) {

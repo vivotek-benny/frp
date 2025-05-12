@@ -1,4 +1,4 @@
-// Copyright 2016 fatedier, fatedier@gmail.com
+// Copyright 2016 vpp_team, vpp_team@gmail.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,11 +41,11 @@ const (
 )
 
 var msgTypeMap = map[byte]interface{}{
-	TypeLogin:              Login{},
-	TypeLoginResp:          LoginResp{},
-	TypeNewProxy:           NewProxy{},
-	TypeNewProxyResp:       NewProxyResp{},
-	TypeCloseProxy:         CloseProxy{},
+	TypeLogin:              Handshake{},
+	TypeLoginResp:          HandshakeAck{},
+	TypeNewProxy:           NewForward{},
+	TypeNewProxyResp:       NewForwardResp{},
+	TypeCloseProxy:         CloseForward{},
 	TypeNewWorkConn:        NewWorkConn{},
 	TypeReqWorkConn:        ReqWorkConn{},
 	TypeStartWorkConn:      StartWorkConn{},
@@ -64,7 +64,7 @@ var msgTypeMap = map[byte]interface{}{
 var TypeNameNatHoleResp = reflect.TypeOf(&NatHoleResp{}).Elem().Name()
 
 type ClientSpec struct {
-	// Due to the support of VirtualClient, frps needs to know the client type in order to
+	// Due to the support of VirtualClient, monitoragents needs to know the client type in order to
 	// differentiate the processing logic.
 	// Optional values: ssh-tunnel
 	Type string `json:"type,omitempty"`
@@ -72,8 +72,8 @@ type ClientSpec struct {
 	AlwaysAuthPass bool `json:"always_auth_pass,omitempty"`
 }
 
-// When frpc start, client send this message to login to server.
-type Login struct {
+// When monitoragentc start, client send this message to login to server.
+type Handshake struct {
 	Version      string            `json:"version,omitempty"`
 	Hostname     string            `json:"hostname,omitempty"`
 	Os           string            `json:"os,omitempty"`
@@ -91,16 +91,16 @@ type Login struct {
 	PoolCount int `json:"pool_count,omitempty"`
 }
 
-type LoginResp struct {
+type HandshakeAck struct {
 	Version string `json:"version,omitempty"`
 	RunID   string `json:"run_id,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
 
-// When frpc login success, send this message to frps for running a new proxy.
-type NewProxy struct {
-	ProxyName          string            `json:"proxy_name,omitempty"`
-	ProxyType          string            `json:"proxy_type,omitempty"`
+// When monitoragentc login success, send this message to monitoragents for running a new proxy.
+type NewForward struct {
+	ForwardName        string            `json:"proxy_name,omitempty"`
+	ForwardType        string            `json:"proxy_type,omitempty"`
 	UseEncryption      bool              `json:"use_encryption,omitempty"`
 	UseCompression     bool              `json:"use_compression,omitempty"`
 	BandwidthLimit     string            `json:"bandwidth_limit,omitempty"`
@@ -130,14 +130,14 @@ type NewProxy struct {
 	Multiplexer string `json:"multiplexer,omitempty"`
 }
 
-type NewProxyResp struct {
-	ProxyName  string `json:"proxy_name,omitempty"`
-	RemoteAddr string `json:"remote_addr,omitempty"`
-	Error      string `json:"error,omitempty"`
+type NewForwardResp struct {
+	ForwardName string `json:"proxy_name,omitempty"`
+	RemoteAddr  string `json:"remote_addr,omitempty"`
+	Error       string `json:"error,omitempty"`
 }
 
-type CloseProxy struct {
-	ProxyName string `json:"proxy_name,omitempty"`
+type CloseForward struct {
+	ForwardName string `json:"proxy_name,omitempty"`
 }
 
 type NewWorkConn struct {
@@ -149,17 +149,17 @@ type NewWorkConn struct {
 type ReqWorkConn struct{}
 
 type StartWorkConn struct {
-	ProxyName string `json:"proxy_name,omitempty"`
-	SrcAddr   string `json:"src_addr,omitempty"`
-	DstAddr   string `json:"dst_addr,omitempty"`
-	SrcPort   uint16 `json:"src_port,omitempty"`
-	DstPort   uint16 `json:"dst_port,omitempty"`
-	Error     string `json:"error,omitempty"`
+	ForwardName string `json:"proxy_name,omitempty"`
+	SrcAddr     string `json:"src_addr,omitempty"`
+	DstAddr     string `json:"dst_addr,omitempty"`
+	SrcPort     uint16 `json:"src_port,omitempty"`
+	DstPort     uint16 `json:"dst_port,omitempty"`
+	Error       string `json:"error,omitempty"`
 }
 
 type NewVisitorConn struct {
 	RunID          string `json:"run_id,omitempty"`
-	ProxyName      string `json:"proxy_name,omitempty"`
+	ForwardName    string `json:"proxy_name,omitempty"`
 	SignKey        string `json:"sign_key,omitempty"`
 	Timestamp      int64  `json:"timestamp,omitempty"`
 	UseEncryption  bool   `json:"use_encryption,omitempty"`

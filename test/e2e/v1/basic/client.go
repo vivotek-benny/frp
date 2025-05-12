@@ -8,10 +8,10 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 
-	clientsdk "github.com/fatedier/frp/pkg/sdk/client"
-	"github.com/fatedier/frp/test/e2e/framework"
-	"github.com/fatedier/frp/test/e2e/framework/consts"
-	"github.com/fatedier/frp/test/e2e/pkg/request"
+	clientsdk "monitoragent/pkg/sdk/client"
+	"monitoragent/test/e2e/framework"
+	"monitoragent/test/e2e/framework/consts"
+	"monitoragent/test/e2e/pkg/request"
 )
 
 var _ = ginkgo.Describe("[Feature: ClientManage]", func() {
@@ -130,7 +130,7 @@ var _ = ginkgo.Describe("[Feature: ClientManage]", func() {
 
 		time.Sleep(3 * time.Second)
 
-		// frpc stopped so the port is not listened, expect error
+		// monitoragentc stopped so the port is not listened, expect error
 		framework.NewRequestExpect(f).Port(testPort).ExpectError(true).Ensure()
 	})
 })

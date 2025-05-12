@@ -1,4 +1,4 @@
-// Copyright 2023 The frp Authors
+// Copyright 2023 The monitoragent Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,8 +56,8 @@ func DefaultVisitorConf(visitorType VisitorType) VisitorConf {
 }
 
 type BaseVisitorConf struct {
-	ProxyName      string `ini:"name" json:"name"`
-	ProxyType      string `ini:"type" json:"type"`
+	ForwardName    string `ini:"name" json:"name"`
+	ForwardType    string `ini:"type" json:"type"`
 	UseEncryption  bool   `ini:"use_encryption" json:"use_encryption"`
 	UseCompression bool   `ini:"use_compression" json:"use_compression"`
 	Role           string `ini:"role" json:"role"`
@@ -79,7 +79,7 @@ func (cfg *BaseVisitorConf) GetBaseConfig() *BaseVisitorConf {
 
 func (cfg *BaseVisitorConf) unmarshalFromIni(_ string, name string, _ *ini.Section) error {
 	// Custom decoration after basic unmarshal:
-	cfg.ProxyName = name
+	cfg.ForwardName = name
 
 	// bind_addr
 	if cfg.BindAddr == "" {
